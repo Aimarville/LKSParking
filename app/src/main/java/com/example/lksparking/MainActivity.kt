@@ -10,17 +10,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import com.example.lksparking.ui.screens.ForgotPasswordScreen
-import com.example.lksparking.ui.screens.LoginScreen
-import com.example.lksparking.ui.screens.MainLayout
-import com.example.lksparking.ui.screens.MyReservationsScreen
-import com.example.lksparking.ui.screens.NewReservationScreen
-import com.example.lksparking.ui.screens.ProfileScreen
-import com.example.lksparking.ui.screens.RegisterScreen
+import androidx.compose.ui.platform.LocalContext
+import com.example.lksparking.data.UserRepository
+import com.example.lksparking.model.User
+import com.example.lksparking.ui.screens.*
 import com.example.lksparking.ui.theme.LKSParkingTheme
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import com.example.lksparking.ui.screens.MyVehiclesScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,13 +31,23 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppNavigation() {
     var currentScreen by remember { mutableStateOf("login") }
+    var currentUser by remember { mutableStateOf<User?>(null) }
+    
+    val context = LocalContext.current
+    val userRepository = remember { UserRepository(context) }
+
+    val userActual = userRepository.usersState.find { it.email == currentUser?.email }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         when (currentScreen) {
             "login" -> LoginScreen(
+                userRepository = userRepository,
                 onForgotPasswordClick = { currentScreen = "forgot_password" },
                 onRegisterClick = { currentScreen = "register" },
-                onLoginAction = { currentScreen = "my_reservations" }
+                onLoginSuccess = { user ->
+                    currentUser = user
+                    currentScreen = "my_reservations"
+                }
             )
 
             "forgot_password" -> ForgotPasswordScreen(
@@ -51,20 +55,46 @@ fun AppNavigation() {
             )
 
             "register" -> RegisterScreen(
-                onLoginClick = { currentScreen = "login" }
+                userRepository = userRepository,
+                onLoginClick = { currentScreen = "login" },
+                onRegisterSuccess = {
+                    currentScreen = "login"
+                }
             )
 
             else -> {
-                // Pantallas principales CON barras automaticas
+                // Pantallas principales CON barras automáticas
                 MainLayout(
+                    currentUser = currentUser,
                     currentRoute = currentScreen,
-                    onNavigate = { currentScreen = it }) { padding ->
+                    onNavigate = { 
+                        if (it == "login") {
+                            currentUser = null
+                        }
+                        currentScreen = it 
+                    }
+                ) { padding ->
                     Box(modifier = Modifier.padding(padding)) {
                         when (currentScreen) {
-                            "my_reservations" -> MyReservationsScreen()
-                            "new_reservation" -> NewReservationScreen()
-                            "profile" -> ProfileScreen(onNavigateToVehicles = {currentScreen = "my_vehicles"})
-                            "my_vehicles" -> MyVehiclesScreen()
+                            "my_reservations" -> MyReservationsScreen(
+                                currentUser = currentUser,
+                                allReservations = userRepository.getAllReservations()
+                            )
+                            "new_reservation" -> NewReservationScreen(
+                                user = userActual,
+                                userRepository = userRepository,
+                                onReservationFinished = {
+                                    currentScreen = "my_reservations"
+                                }
+                            )
+                            "profile" -> ProfileScreen(
+                                user = currentUser,
+                                onNavigateToVehicles = { currentScreen = "my_vehicles" }
+                            )
+                            "my_vehicles" -> MyVehiclesScreen(
+                                user = currentUser,
+                                userRepository = userRepository
+                            )
                         }
                     }
                 }

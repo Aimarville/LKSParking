@@ -18,11 +18,15 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.text.style.TextAlign
+import com.example.lksparking.model.User
 import com.example.lksparking.ui.theme.OrangeLKS
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(onNavigateToVehicles: () -> Unit) {
+fun ProfileScreen(
+    user: User?,
+    onNavigateToVehicles: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -48,7 +52,8 @@ fun ProfileScreen(onNavigateToVehicles: () -> Unit) {
                             color = OrangeLKS
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Text("J", color = Color.White, fontSize = 40.sp)
+                                val initial = user?.nombre?.firstOrNull()?.toString() ?: "?"
+                                Text(initial, color = Color.White, fontSize = 40.sp)
                             }
                         }
                         Surface(
@@ -62,18 +67,18 @@ fun ProfileScreen(onNavigateToVehicles: () -> Unit) {
                     }
                     Spacer(Modifier.width(16.dp))
                     Column {
-                        Text("Juan Pérez", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                        Text("juan.perez@empresa.com", fontSize = 14.sp, color = Color.Gray)
+                        Text(user?.nombre ?: "Nombre", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        Text(user?.email ?: "correo@empresa.com", fontSize = 14.sp, color = Color.Gray)
                     }
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), thickness = 0.5.dp)
 
-                // Campos de información (Reutlizando el componente ProfileField de abajo
-                ProfileField(label = "Nombre Completo *", value = "Juan Pérez")
-                ProfileField(label = "Correo Corporativo *", value = "juan.perez@empresa.com")
-                ProfileField(label = "Teléfono *", value = "+34 600 123 456")
-                ProfileField(label = "Departamento *", value = "Desarrollo")
+                // Campos de información
+                ProfileField(label = "Nombre Completo *", value = user?.nombre ?: "")
+                ProfileField(label = "Correo Corporativo *", value = user?.email ?: "")
+                ProfileField(label = "Teléfono *", value = user?.telefono ?: "")
+                ProfileField(label = "Departamento *", value = user?.departamento ?: "")
 
                 Spacer(Modifier.height(16.dp))
 
@@ -107,7 +112,8 @@ fun ProfileScreen(onNavigateToVehicles: () -> Unit) {
                     Spacer(Modifier.width(12.dp))
                     Column {
                         Text("Mis Vehículos", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Text("Gestiona tus vehículos", fontSize = 12.sp, color = Color.Gray)
+                        val vehicleCount = user?.vehiculos?.size ?: 0
+                        Text("$vehicleCount vehículos registrados", fontSize = 12.sp, color = Color.Gray)
                     }
                 }
                 OutlinedButton(

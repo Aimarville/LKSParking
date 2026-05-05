@@ -1,5 +1,6 @@
 package com.example.lksparking.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -21,20 +23,23 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.lksparking.data.UserRepository
+import com.example.lksparking.model.User
 import com.example.lksparking.ui.theme.LKSParkingTheme
+import com.example.lksparking.ui.theme.OrangeLKS
 
 @Composable
 fun LoginScreen(
+    userRepository: UserRepository,
     modifier: Modifier = Modifier,
     onForgotPasswordClick: () -> Unit = {},
     onRegisterClick: () -> Unit = {},
-    onLoginAction: () -> Unit = {}
+    onLoginSuccess: (User) -> Unit = {}
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-
-    val orangeColor = Color(0xFFFF6D00)
+    val context = LocalContext.current
 
     Column(
         modifier = modifier
@@ -59,7 +64,7 @@ fun LoginScreen(
                     imageVector = Icons.Default.DirectionsCar,
                     contentDescription = "Car Icon",
                     modifier = Modifier.size(64.dp),
-                    tint = orangeColor
+                    tint = OrangeLKS
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -115,7 +120,7 @@ fun LoginScreen(
                 ) {
                     Text(
                         text = "¿Olvidaste tu contraseña?",
-                        color = orangeColor,
+                        color = OrangeLKS,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.clickable { onForgotPasswordClick() }
@@ -125,11 +130,23 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Button(
-                    onClick = { onLoginAction() },
+                    onClick = {
+                        if (email.isEmpty() || password.isEmpty()) {
+                            Toast.makeText(context, "Por favor rellena todos los campos", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        
+                        val user = userRepository.getUserByEmail(email)
+                        if (user != null && user.password == password) {
+                            onLoginSuccess(user)
+                        } else {
+                            Toast.makeText(context, "Correo o contraseña incorrectos", Toast.LENGTH_SHORT).show()
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = orangeColor),
+                    colors = ButtonDefaults.buttonColors(containerColor = OrangeLKS),
                     shape = RoundedCornerShape(4.dp)
                 ) {
                     Text(
@@ -150,20 +167,12 @@ fun LoginScreen(
                     Text(
                         text = "Regístrate",
                         fontSize = 14.sp,
-                        color = orangeColor,
+                        color = OrangeLKS,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.clickable { onRegisterClick() }
                     )
                 }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun LoginScreenPreview() {
-    LKSParkingTheme {
-        LoginScreen()
     }
 }

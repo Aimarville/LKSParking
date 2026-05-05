@@ -1,5 +1,6 @@
 package com.example.lksparking.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -15,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -23,12 +25,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.lksparking.data.UserRepository
+import com.example.lksparking.model.User
 import com.example.lksparking.ui.theme.GrayText
 import com.example.lksparking.ui.theme.LKSParkingTheme
 import com.example.lksparking.ui.theme.OrangeLKS
 
 @Composable
 fun RegisterScreen(
+    userRepository: UserRepository,
     modifier: Modifier = Modifier,
     onLoginClick: () -> Unit = {},
     onRegisterSuccess: () -> Unit = {}
@@ -40,6 +45,7 @@ fun RegisterScreen(
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     Column(
         modifier = modifier
@@ -167,7 +173,35 @@ fun RegisterScreen(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Button(
-                    onClick = { onRegisterSuccess() },
+                    onClick = {
+                        if (name.isEmpty() || email.isEmpty() || phone.isEmpty() || department.isEmpty() || password.isEmpty()) {
+                            Toast.makeText(context, "Por favor rellena todos los campos", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        if (password != confirmPassword) {
+                            Toast.makeText(context, "Las contraseñas no coinciden", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        if (!email.endsWith("@empresa.com")) {
+                            Toast.makeText(context, "El correo debe terminar en @empresa.com", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
+                        val newUser = User(
+                            nombre = name,
+                            email = email,
+                            telefono = phone,
+                            departamento = department,
+                            password = password
+                        )
+
+                        if (userRepository.saveUser(newUser)) {
+                            Toast.makeText(context, "Registro exitoso", Toast.LENGTH_SHORT).show()
+                            onRegisterSuccess()
+                        } else {
+                            Toast.makeText(context, "El correo ya está registrado", Toast.LENGTH_SHORT).show()
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
@@ -199,13 +233,5 @@ fun RegisterScreen(
                 }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun RegisterScreenPreview() {
-    LKSParkingTheme {
-        RegisterScreen()
     }
 }

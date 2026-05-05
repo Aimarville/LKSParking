@@ -1,11 +1,15 @@
 package com.example.lksparking.ui.screens
 
-import android.R
-import android.widget.Space
-import androidx.compose.foundation.background
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
+import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -15,19 +19,35 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.lksparking.ui.theme.LKSParkingTheme
+import com.example.lksparking.data.UserRepository
+import com.example.lksparking.model.*
 import com.example.lksparking.ui.theme.OrangeLKS
+import java.text.SimpleDateFormat
+import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NewReservationScreen() {
-    var currentStep by remember {mutableIntStateOf(1)}
-    var selectedVehicle by remember {mutableStateOf("")}
-    var isExpended by remember {mutableStateOf(false)}
+fun NewReservationScreen(
+    user: User?,
+    userRepository: UserRepository,
+    onReservationFinished: () -> Unit
+) {
+    var currentStep by remember { mutableIntStateOf(1) }
+    var selectedVehicle by remember { mutableStateOf<Vehicle?>(null) }
+    
+    // Step 2 state
+    var selectedDate by remember { mutableStateOf<Calendar?>(null) }
+    var startTime by remember { mutableStateOf<Calendar?>(null) }
+    var endTime by remember { mutableStateOf<Calendar?>(null) }
+    
+    // Step 3 state
+    var selectedSpot by remember { mutableStateOf<ParkingSpot?>(null) }
+    var filterType by remember { mutableStateOf("TODAS") }
+
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -42,20 +62,19 @@ fun NewReservationScreen() {
 
         Spacer(Modifier.height(16.dp))
 
-        // --- STEPPER (Pasos 1, 2, 3) ---
+        // --- STEPPER ---
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            StepItem(number = "1", text = "Seleccionar\nVehiculo", isActive = currentStep == 1)
-            StepItem(number = "2", text = "Fecha y\nHora", isActive = currentStep == 2)
-            StepItem(number = "3", text = "Seleccionar\nPlaza", isActive = currentStep == 3)
+            StepItem(number = "1", text = "Seleccionar\nVehículo", isActive = currentStep >= 1, isCompleted = currentStep > 1)
+            StepItem(number = "2", text = "Fecha y\nHora", isActive = currentStep >= 2, isCompleted = currentStep > 2)
+            StepItem(number = "3", text = "Seleccionar\nPlaza", isActive = currentStep >= 3, isCompleted = currentStep > 3)
         }
 
         Spacer(Modifier.height(24.dp))
 
-        // --- CARD PASO 1 ---
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -63,38 +82,90 @@ fun NewReservationScreen() {
             shape = RoundedCornerShape(8.dp)
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
-
-                // --- AQUI CAMBIAMOS EL CONTENIDO SEGUN EL PASO ---
                 when (currentStep) {
-                    1 -> StepOneContent(
+                    1 -> StepOne(
+                        user = user,
                         selectedVehicle = selectedVehicle,
-                        isExpanded = isExpended,
-                        onExpandedChange = {isExpended = it},
-                        onVehicleSelect = {selectedVehicle = it; isExpended = false}
+                        onVehicleSelected = { selectedVehicle = it }
                     )
-                    2 -> StepTwoContent()
-                    3 -> Text("Contenido del Paso 3")
+                    2 -> StepTwo(
+                        selectedDate = selectedDate,
+                        onDateSelected = { selectedDate = it },
+                        startTime = startTime,
+                        onStartTimeSelected = { startTime = it },
+                        endTime = endTime,
+                        onEndTimeSelected = { endTime = it }
+                    )
+                    3 -> StepThree(
+                        userRepository = userRepository,
+                        selectedVehicle = selectedVehicle,
+                        selectedDate = selectedDate,
+                        startTime = startTime,
+                        endTime = endTime,
+                        selectedSpot = selectedSpot,
+                        onSpotSelected = { selectedSpot = it },
+                        filterType = filterType,
+                        onFilterChange = { filterType = it }
+                    )
                 }
 
                 Spacer(Modifier.height(32.dp))
 
-                // Botones de navegacion
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // BOTÓN ATRÁS (Siempre visible excepto en paso 1)
                     OutlinedButton(
-                        onClick = {if (currentStep > 1) currentStep--},
+                        onClick = { if (currentStep > 1) currentStep-- },
+                        enabled = currentStep > 1,
+                        modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(4.dp),
-                        modifier = Modifier.width(100.dp)
+                        border = BorderStroke(1.dp, if (currentStep > 1) OrangeLKS else Color.LightGray)
                     ) {
-                        Text("ATRÁS", color = Color.LightGray)
+                        Text("ATRÁS", color = if (currentStep > 1) OrangeLKS else Color.LightGray)
                     }
 
+                    Spacer(Modifier.width(16.dp))
+
+                    // BOTÓN SIGUIENTE / FINALIZAR
                     Button(
-                        onClick = {if (currentStep < 3) currentStep++},
+                        onClick = {
+                            if (currentStep < 3) {
+                                if (validateStep(currentStep, selectedVehicle, selectedDate, startTime, endTime, context)) {
+                                    currentStep++
+                                }
+                            } else {
+                                if (selectedSpot != null && selectedVehicle != null && selectedDate != null) {
+                                    // 1. CREAR EL OBJETO RESERVA
+                                    val newReservation = Reservation(
+                                        id = UUID.randomUUID().toString(),
+                                        userEmail = user?.email ?: "",
+                                        vehiclePlate = selectedVehicle!!.plate,
+                                        spotId = selectedSpot!!.id,
+                                        date = selectedDate!!,
+                                        startTime = startTime!!,
+                                        endTime = endTime!!
+                                    )
+
+                                    // 2. GUARDAR EN EL REPOSITORIO
+                                    userRepository.addReservation(newReservation)
+
+                                    // 3. SEÑAL DE ÉXITO Y NAVEGACIÓN
+                                    Toast.makeText(context, "¡Reserva confirmada!", Toast.LENGTH_SHORT).show()
+
+                                    // Esta función debe venir de MainActivity para cambiar la pantalla
+                                    onReservationFinished()
+                                } else {
+                                    Toast.makeText(context, "Por favor, selecciona una plaza", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(4.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                        modifier = Modifier.width(150.dp)
+                        colors = ButtonDefaults.buttonColors(containerColor = OrangeLKS)
                     ) {
-                        Text("SIGUIENTE")
+                        Text(if (currentStep < 3) "SIGUIENTE" else "FINALIZAR")
                     }
                 }
             }
@@ -102,17 +173,59 @@ fun NewReservationScreen() {
     }
 }
 
+fun validateStep(
+    step: Int,
+    vehicle: Vehicle?,
+    date: Calendar?,
+    start: Calendar?,
+    end: Calendar?,
+    context: android.content.Context
+): Boolean {
+    when (step) {
+        1 -> {
+            if (vehicle == null) {
+                Toast.makeText(context, "Por favor selecciona un vehículo", Toast.LENGTH_SHORT).show()
+                return false
+            }
+        }
+        2 -> {
+            if (date == null || start == null || end == null) {
+                Toast.makeText(context, "Por favor completa todos los campos", Toast.LENGTH_SHORT).show()
+                return false
+            }
+            
+            // Re-calculamos para validar (ignorando fecha real, solo horas)
+            val durationMs = end.timeInMillis - start.timeInMillis
+            val hours = durationMs / (1000 * 60 * 60.0)
+            
+            if (hours <= 0) {
+                Toast.makeText(context, "La hora de fin debe ser posterior a la de inicio", Toast.LENGTH_SHORT).show()
+                return false
+            }
+            if (hours > 9) {
+                Toast.makeText(context, "La duración máxima permitida es de 9 horas", Toast.LENGTH_SHORT).show()
+                return false
+            }
+        }
+    }
+    return true
+}
+
 @Composable
-fun StepItem(number: String, text: String, isActive: Boolean) {
-    val color = if (isActive) MaterialTheme.colorScheme.primary else Color.Gray.copy(alpha = 0.5f)
+fun StepItem(number: String, text: String, isActive: Boolean, isCompleted: Boolean) {
+    val color = if (isActive || isCompleted) OrangeLKS else Color.Gray.copy(alpha = 0.5f)
     Row(verticalAlignment = Alignment.CenterVertically) {
         Surface(
             shape = CircleShape,
             color = color,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(28.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Text(number, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                if (isCompleted) {
+                    Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                } else {
+                    Text(number, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
         Spacer(Modifier.width(8.dp))
@@ -120,104 +233,346 @@ fun StepItem(number: String, text: String, isActive: Boolean) {
             text = text,
             fontSize = 11.sp,
             lineHeight = 14.sp,
-            color = if (isActive) Color.Black else Color.Gray,
-            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
+            color = if (isActive || isCompleted) Color.Black else Color.Gray,
+            fontWeight = if (isActive || isCompleted) FontWeight.Bold else FontWeight.Normal
         )
     }
 }
 
-// --- CONTENIDO PASO 1 ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StepOneContent(
-    selectedVehicle: String,
-    isExpanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit,
-    onVehicleSelect: (String) -> Unit
+fun StepOne(
+    user: User?,
+    selectedVehicle: Vehicle?,
+    onVehicleSelected: (Vehicle) -> Unit
 ) {
+    var expanded by remember { mutableStateOf(false) }
+    val vehicles = user?.vehiculos ?: emptyList()
+
     Column {
         Text("Selecciona tu vehículo", fontSize = 18.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(16.dp))
+        
         ExposedDropdownMenuBox(
-            expanded = isExpanded,
-            onExpandedChange = onExpandedChange
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded }
         ) {
             OutlinedTextField(
-                value = selectedVehicle,
+                value = selectedVehicle?.let { "${it.plate} - ${it.brand} ${it.model}" } ?: "",
                 onValueChange = {},
                 readOnly = true,
-                label = {Text("Vehículo")},
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isExpanded)},
-                modifier = Modifier.menuAnchor().fillMaxWidth()
+                label = { Text("Vehículo") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth()
             )
             ExposedDropdownMenu(
-                expanded = isExpanded,
-                onDismissRequest = {onExpandedChange(false)}
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
             ) {
-                DropdownMenuItem(
-                    text = {Text("Coche - 1234ABC")},
-                    onClick = {onVehicleSelect("Coche - 1234ABC")}
-                )
+                if (vehicles.isEmpty()) {
+                    DropdownMenuItem(text = { Text("No tienes vehículos registrados") }, onClick = {})
+                } else {
+                    vehicles.forEach { vehicle ->
+                        DropdownMenuItem(
+                            text = { Text("${vehicle.plate} - ${vehicle.brand} ${vehicle.model}") },
+                            onClick = {
+                                onVehicleSelected(vehicle)
+                                expanded = false
+                            }
+                        )
+                    }
+                }
             }
         }
     }
 }
 
-// --- CONTENIDO PASO 2 ---
 @Composable
-fun StepTwoContent() {
+fun StepTwo(
+    selectedDate: Calendar?,
+    onDateSelected: (Calendar) -> Unit,
+    startTime: Calendar?,
+    onStartTimeSelected: (Calendar) -> Unit,
+    endTime: Calendar?,
+    onEndTimeSelected: (Calendar) -> Unit
+) {
+    val context = LocalContext.current
+    val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+
     Column {
         Text("Selecciona fecha y hora", fontSize = 18.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(16.dp))
 
-        OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            label = {Text("Fecha *")},
-            readOnly = true,
-            trailingIcon = {Icon(Icons.Default.DateRange, null)},
-            modifier = Modifier.fillMaxWidth()
-        )
+        // Selector de Fecha
+        Box(modifier = Modifier.fillMaxWidth().clickable {
+            val calendar = Calendar.getInstance()
+            DatePickerDialog(
+                context,
+                { _, y, m, d ->
+                    val newDate = Calendar.getInstance().apply { set(y, m, d) }
+                    onDateSelected(newDate)
+                },
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH)
+            ).apply {
+                datePicker.minDate = System.currentTimeMillis()
+                datePicker.maxDate = System.currentTimeMillis() + (7 * 24 * 60 * 60 * 1000)
+            }.show()
+        }) {
+            OutlinedTextField(
+                value = selectedDate?.let { dateFormat.format(it.time) } ?: "",
+                onValueChange = {},
+                label = { Text("Fecha *") },
+                readOnly = true,
+                enabled = false,
+                trailingIcon = { Icon(Icons.Default.CalendarToday, null, tint = OrangeLKS) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    disabledTextColor = Color.Black,
+                    disabledBorderColor = Color.Gray,
+                    disabledLabelColor = Color.Gray,
+                    disabledTrailingIconColor = OrangeLKS
+                )
+            )
+        }
 
         Spacer(Modifier.height(16.dp))
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(
-                value = "08:00",
-                onValueChange = {},
-                label = {Text("Hora de inicio *")},
-                modifier = Modifier.weight(1f)
-            )
-            OutlinedTextField(
-                value = "12:00",
-                onValueChange = {},
-                label = {Text("Hora de fin *")},
-                modifier = Modifier.weight(1f)
-            )
+            // Hora de Inicio
+            Box(modifier = Modifier.weight(1f).clickable {
+                TimePickerDialog(context, { _, h, min ->
+                    val cal = Calendar.getInstance().apply { 
+                        set(Calendar.HOUR_OF_DAY, h)
+                        set(Calendar.MINUTE, min) 
+                    }
+                    onStartTimeSelected(cal)
+                }, 8, 0, true).show()
+            }) {
+                OutlinedTextField(
+                    value = startTime?.let { timeFormat.format(it.time) } ?: "08:00",
+                    onValueChange = {},
+                    label = { Text("Hora de inicio *") },
+                    readOnly = true,
+                    enabled = false,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        disabledTextColor = Color.Black,
+                        disabledBorderColor = Color.Gray,
+                        disabledLabelColor = Color.Gray
+                    )
+                )
+            }
+            
+            // Hora de Fin
+            Box(modifier = Modifier.weight(1f).clickable {
+                TimePickerDialog(context, { _, h, min ->
+                    val cal = Calendar.getInstance().apply { 
+                        set(Calendar.HOUR_OF_DAY, h)
+                        set(Calendar.MINUTE, min) 
+                    }
+                    onEndTimeSelected(cal)
+                }, 12, 0, true).show()
+            }) {
+                OutlinedTextField(
+                    value = endTime?.let { timeFormat.format(it.time) } ?: "12:00",
+                    onValueChange = {},
+                    label = { Text("Hora de fin *") },
+                    readOnly = true,
+                    enabled = false,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        disabledTextColor = Color.Black,
+                        disabledBorderColor = Color.Gray,
+                        disabledLabelColor = Color.Gray
+                    )
+                )
+            }
         }
 
         Spacer(Modifier.height(24.dp))
 
-        // El aviso azul de duracion
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFFE3F2FD), RoundedCornerShape(8.dp))
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        if (startTime != null && endTime != null) {
+            val diff = endTime.timeInMillis - startTime.timeInMillis
+            val hours = diff / (1000 * 60 * 60.0)
+            if (hours > 0) {
+                Surface(
+                    color = Color(0xFFE3F2FD),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Info, null, tint = Color(0xFF0288D1))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Duración de la reserva: ", fontSize = 14.sp)
+                        val hStr = String.format(Locale.getDefault(), "%.0f", hours)
+                        Text("${hStr}h", fontWeight = FontWeight.Bold, color = Color(0xFF0288D1))
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+        
+        Surface(
+            color = Color(0xFFE1F5FE),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Icon(Icons.Default.Info, null, tint = Color(0xFF0288D1))
-            Spacer(Modifier.width(8.dp))
-            Text("Duración de la reserva: ", fontSize = 14.sp)
-            Text("4h", fontWeight = FontWeight.Bold, color = Color(0xFF0288D1))
+            Column(modifier = Modifier.padding(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Info, null, tint = Color(0xFF0288D1), modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Restricciones:", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF0288D1))
+                }
+                Text("• Duración máxima: 9 horas", fontSize = 13.sp, color = Color.DarkGray, modifier = Modifier.padding(start = 28.dp))
+                Text("• Anticipación máxima: 7 días", fontSize = 13.sp, color = Color.DarkGray, modifier = Modifier.padding(start = 28.dp))
+            }
         }
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-fun NewReservationScreenPreview() {
-    LKSParkingTheme {
-        NewReservationScreen()
+fun StepThree(
+    userRepository: UserRepository,
+    selectedVehicle: Vehicle?,
+    selectedDate: Calendar?,
+    startTime: Calendar?,
+    endTime: Calendar?,
+    selectedSpot: ParkingSpot?,
+    onSpotSelected: (ParkingSpot) -> Unit,
+    filterType: String,
+    onFilterChange: (String) -> Unit
+) {
+    // Generar la lista de plazas (30 plazas con tipos variados)
+    val allSpots = remember {
+        val list = mutableListOf<ParkingSpot>()
+        for (i in 1..15) list.add(ParkingSpot("A-${String.format("%02d", i)}", SpotType.NORMAL))
+        for (i in 1..8) list.add(ParkingSpot("E-${String.format("%02d", i)}", SpotType.ELECTRIC))
+        for (i in 1..4) list.add(ParkingSpot("D-${String.format("%02d", i)}", SpotType.DISABLED))
+        for (i in 1..3) list.add(ParkingSpot("M-${String.format("%02d", i)}", SpotType.MOTORCYCLE))
+        list
+    }
+
+    // LÓGICA DE FILTRADO SEGÚN VEHÍCULO Y DISPONIBILIDAD
+    val filteredSpots = remember(selectedVehicle, filterType, selectedDate, startTime, endTime, userRepository.reservationsState.size) {
+        allSpots.filter { spot ->
+            // 1. Compatibilidad de tipo de plaza
+            val isCompatible = when (selectedVehicle?.type) {
+                VehicleType.MOTORCYCLE -> spot.type == SpotType.MOTORCYCLE
+                VehicleType.AUTOMOBILE -> {
+                    when {
+                        selectedVehicle.isDisabled && selectedVehicle.isElectric ->
+                            spot.type == SpotType.DISABLED || spot.type == SpotType.ELECTRIC || spot.type == SpotType.NORMAL
+                        selectedVehicle.isDisabled -> spot.type == SpotType.DISABLED || spot.type == SpotType.NORMAL
+                        selectedVehicle.isElectric -> spot.type == SpotType.ELECTRIC || spot.type == SpotType.NORMAL
+                        else -> spot.type == SpotType.NORMAL
+                    }
+                }
+                else -> false
+            }
+
+            // 2. Disponibilidad horaria
+            val isAvailable = if(selectedDate != null && startTime != null && endTime != null) {
+                userRepository.isSpotAvailable(spot.id, selectedDate, startTime, endTime)
+            } else true
+
+            // 3. Filtro de pestañas (TODAS, MOTO, etc.)
+            val matchesFilter = if (filterType == "TODAS") true else spot.type.name == filterType
+
+            // IMPORTANTE: Aquí es donde fallaba, hay que incluir isAvailable
+            isCompatible && matchesFilter && isAvailable
+        }
+    }
+
+    Column {
+        Text("Selecciona una plaza disponible", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+
+        Spacer(Modifier.height(16.dp))
+
+        // FILTROS DINÁMICOS
+        Text("Filtrar por tipo:", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FilterButton("TODAS", filterType == "TODAS") { onFilterChange("TODAS") }
+
+            // Mostrar botones de filtro solo si el vehículo puede usarlos
+            if (selectedVehicle?.type == VehicleType.MOTORCYCLE) {
+                FilterButton("MOTO", filterType == "MOTORCYCLE") { onFilterChange("MOTORCYCLE") }
+            } else {
+                FilterButton("NORMAL", filterType == "NORMAL") { onFilterChange("NORMAL") }
+                if (selectedVehicle?.isElectric == true) {
+                    FilterButton("ELÉCTRICO", filterType == "ELECTRIC") { onFilterChange("ELECTRIC") }
+                }
+                if (selectedVehicle?.isDisabled == true) {
+                    FilterButton("MINUS.", filterType == "DISABLED") { onFilterChange("DISABLED") }
+                }
+            }
+        }
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.heightIn(max = 300.dp)
+        ) {
+            items(filteredSpots) { spot ->
+                val isSelected = selectedSpot?.id == spot.id
+
+                // SELECCIÓN DE ICONO SEGÚN TIPO DE PLAZA
+                val icon = when (spot.type) {
+                    SpotType.NORMAL -> Icons.Default.DirectionsCar
+                    SpotType.ELECTRIC -> Icons.Default.EvStation
+                    SpotType.DISABLED -> Icons.Default.Accessible
+                    SpotType.MOTORCYCLE -> Icons.Default.TwoWheeler
+                }
+
+                Surface(
+                    modifier = Modifier
+                        .clickable { onSpotSelected(spot) }
+                        .border(
+                            width = 1.dp,
+                            color = if (isSelected) OrangeLKS else Color.LightGray,
+                            shape = RoundedCornerShape(8.dp)
+                        ),
+                    color = if (isSelected) OrangeLKS.copy(alpha = 0.1f) else Color.White,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(icon, null, tint = if (isSelected) OrangeLKS else Color.Gray)
+                        Spacer(Modifier.width(8.dp))
+                        Text(spot.id, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FilterButton(label: String, isSelected: Boolean, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .height(40.dp)
+            .clickable { onClick() }
+            .border(1.dp, Color.LightGray, RoundedCornerShape(4.dp)),
+        color = if (isSelected) Color(0xFFE0E0E0) else Color.White,
+        shape = RoundedCornerShape(4.dp)
+    ) {
+        Box(modifier = Modifier.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+            Text(
+                text = if (label == "NORMAL") "P NORMAL" else label,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isSelected) Color.Black else Color.Gray
+            )
+        }
     }
 }

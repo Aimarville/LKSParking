@@ -2,6 +2,8 @@ package com.example.lksparking.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -12,22 +14,36 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.lksparking.model.Reservation
+import com.example.lksparking.model.User
 import com.example.lksparking.ui.theme.BlueInfoBg
-import com.example.lksparking.ui.theme.LKSParkingTheme
+import com.example.lksparking.ui.theme.OrangeLKS
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyReservationsScreen() {
+fun MyReservationsScreen(
+    currentUser: User?,
+    allReservations: List<Reservation>
+) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    var tabs = listOf("VIGENTES (0)", "HISTORICAS (0)")
+
+    var userReservations = allReservations.filter { it.userEmail == currentUser?.email }
+
+    val today = Calendar.getInstance()
+
+    val vigentes = userReservations.filter { it.date.after(today) || isSameDay(it.date, today) }
+    val historicas = userReservations.filter { it.date.before(today) && !isSameDay(it.date, today) }
+
+    var tabs = listOf("VIGENTES (${vigentes.size})", "HISTORICAS (${historicas.size})")
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(Color(0xFFF5F5F5))
     ) {
         // Titulo de la seccion
         Text(
@@ -41,11 +57,10 @@ fun MyReservationsScreen() {
         TabRow(
             selectedTabIndex = selectedTab,
             containerColor = Color.White,
-            contentColor = MaterialTheme.colorScheme.primary,
             indicator = { tabPositions ->
                 TabRowDefaults.SecondaryIndicator(
                     Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                    color = MaterialTheme.colorScheme.primary
+                    color = OrangeLKS
                 )
             }
         ) {
@@ -65,37 +80,83 @@ fun MyReservationsScreen() {
             }
         }
 
-        // Contenido segun la pestaña (Aviso azul)
-        val infoText = if (selectedTab == 0) {
-            "No tienes reservas vigentes en este momento."
-        } else {
-            "No hay reservas históricas del último mes."
-        }
+        val currentList = if (selectedTab == 0) vigentes else historicas
 
-        Box(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(BlueInfoBg, RoundedCornerShape(8.dp))
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+        if (currentList.isEmpty()) {
+            Box(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().background(BlueInfoBg, RoundedCornerShape(8.dp)).padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Info, null, tint = Color(0xFF0288D1))
+                    Spacer(Modifier.width(12.dp))
+                    Text(if (selectedTab == 0) "No tienes reservas vigentes." else "No hay historial.")
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    text = infoText,
-                    color = Color.Black,
-                    fontSize = 14.sp
-                )
+                items(currentList) { reservation ->
+                    ReservationCard(reservation)
+                }
             }
         }
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-fun MyReservationsScreenPreview() {
-    LKSParkingTheme {
-        MyReservationsScreen()
+fun ReservationCard(res: Reservation) {
+    val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Icono de Parking
+            Surface(
+                color = OrangeLKS.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.size(56.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.LocalParking, null, tint = OrangeLKS, modifier = Modifier.size(32.dp))
+                }
+            }
+
+            Spacer(Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Plaza ${res.spotId}", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(dateFormat.format(res.date.time), color = Color.Gray, fontSize = 14.sp)
+                Text(
+                    "${timeFormat.format(res.startTime.time)} - ${timeFormat.format(res.endTime.time)}",
+                    color = OrangeLKS,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp
+                )
+            }
+
+            Column(horizontalAlignment = Alignment.End) {
+                Text(res.vehiclePlate, fontWeight = FontWeight.Bold, color = Color.DarkGray)
+                // Badge de estado
+                Surface(
+                    color = Color(0xFFE8F5E9),
+                    shape = RoundedCornerShape(4.dp)
+                ) {
+                    Text("Confirmada", color = Color(0xFF2E7D32), fontSize = 10.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                }
+            }
+        }
     }
+}
+
+fun isSameDay(cal1: Calendar, cal2: Calendar): Boolean {
+    return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
+            cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
 }
