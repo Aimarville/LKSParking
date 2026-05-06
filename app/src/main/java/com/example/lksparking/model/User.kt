@@ -6,5 +6,6 @@ data class User(
     val telefono: String = "",
     val departamento: String = "",
     val password: String = "",
-    val vehiculos: List<Vehicle> = emptyList()
+    val vehiculos: List<Vehicle> = emptyList(),
+    val profilePhotoUri: String? = null
 )

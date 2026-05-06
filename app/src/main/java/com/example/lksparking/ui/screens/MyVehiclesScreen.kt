@@ -29,7 +29,9 @@ fun MyVehiclesScreen(
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    var currentUserState by remember { mutableStateOf(user) }
+    val currentUserVehicles = user?.email?.let { email ->
+        userRepository.getUserByEmail(email)?.vehiculos
+    } ?: emptyList()
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(
@@ -69,18 +71,17 @@ fun MyVehiclesScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        if (currentUserState?.vehiculos?.isEmpty() == true) {
+        if (currentUserVehicles.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("No tienes vehículos registrados", color = Color.Gray)
             }
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(currentUserState?.vehiculos ?: emptyList()) { vehicle ->
+                items(currentUserVehicles) { vehicle ->
                     VehicleCard(vehicle = vehicle, onDelete = {
-                        val newList = currentUserState?.vehiculos?.filter { it.plate != vehicle.plate } ?: emptyList()
-                        val updatedUser = currentUserState?.copy(vehiculos = newList)
-                        if (updatedUser != null && userRepository.updateUser(updatedUser)) {
-                            currentUserState = updatedUser
+                        // REPARACIÓN ELIMINAR:
+                        val success = userRepository.removeVehicleFromUser(user?.email ?: "", vehicle.plate)
+                        if (success) {
                             Toast.makeText(context, "Vehículo eliminado", Toast.LENGTH_SHORT).show()
                         }
                     })
@@ -93,15 +94,12 @@ fun MyVehiclesScreen(
         AddVehicleDialog(
             onDismiss = { showAddDialog = false },
             onVehicleAdded = { newVehicle ->
-                // Verificamos si la matrícula ya está registrada GLOBALMENTE por cualquier usuario
                 if (userRepository.isPlateRegisteredGlobally(newVehicle.plate)) {
-                    Toast.makeText(context, "Este vehículo ya está registrado por otro usuario", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "Este vehículo ya está registrado", Toast.LENGTH_LONG).show()
                 } else {
-                    val currentVehicles = currentUserState?.vehiculos?.toMutableList() ?: mutableListOf()
-                    currentVehicles.add(newVehicle)
-                    val updatedUser = currentUserState?.copy(vehiculos = currentVehicles)
-                    if (updatedUser != null && userRepository.updateUser(updatedUser)) {
-                        currentUserState = updatedUser
+                    // REPARACIÓN AÑADIR:
+                    val success = userRepository.addVehicleToUser(user?.email ?: "", newVehicle)
+                    if (success) {
                         showAddDialog = false
                         Toast.makeText(context, "Vehículo añadido", Toast.LENGTH_SHORT).show()
                     }

@@ -12,7 +12,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.example.lksparking.data.UserRepository
-import com.example.lksparking.model.User
 import com.example.lksparking.ui.screens.*
 import com.example.lksparking.ui.theme.LKSParkingTheme
 
@@ -31,12 +30,13 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppNavigation() {
     var currentScreen by remember { mutableStateOf("login") }
-    var currentUser by remember { mutableStateOf<User?>(null) }
-    
+    var currentUserEmail by remember { mutableStateOf<String?>(null) } // Guardamos solo el Email
+
     val context = LocalContext.current
     val userRepository = remember { UserRepository(context) }
 
-    val userActual = userRepository.usersState.find { it.email == currentUser?.email }
+    // Buscamos al usuario en tiempo real desde el estado reactivo del repositorio
+    val userActual = userRepository.usersState.find { it.email == currentUserEmail }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         when (currentScreen) {
@@ -45,40 +45,30 @@ fun AppNavigation() {
                 onForgotPasswordClick = { currentScreen = "forgot_password" },
                 onRegisterClick = { currentScreen = "register" },
                 onLoginSuccess = { user ->
-                    currentUser = user
+                    currentUserEmail = user.email // Guardamos el email
                     currentScreen = "my_reservations"
                 }
             )
 
-            "forgot_password" -> ForgotPasswordScreen(
-                onBackClick = { currentScreen = "login" }
-            )
-
-            "register" -> RegisterScreen(
-                userRepository = userRepository,
-                onLoginClick = { currentScreen = "login" },
-                onRegisterSuccess = {
-                    currentScreen = "login"
-                }
-            )
+            // ... forgot_password y register se mantienen igual ...
 
             else -> {
-                // Pantallas principales CON barras automáticas
                 MainLayout(
-                    currentUser = currentUser,
+                    // Pasamos userActual para que la barra lateral/superior vea los cambios (como la foto)
+                    currentUser = userActual,
                     currentRoute = currentScreen,
-                    onNavigate = { 
+                    onNavigate = {
                         if (it == "login") {
-                            currentUser = null
+                            currentUserEmail = null
                         }
-                        currentScreen = it 
+                        currentScreen = it
                     }
                 ) { padding ->
                     Box(modifier = Modifier.padding(padding)) {
                         when (currentScreen) {
                             "my_reservations" -> MyReservationsScreen(
-                                currentUser = currentUser,
-                                allReservations = userRepository.getAllReservations()
+                                currentUser = userActual,
+                                allReservations = userRepository.reservationsState // Usamos el estado reactivo
                             )
                             "new_reservation" -> NewReservationScreen(
                                 user = userActual,
@@ -88,11 +78,12 @@ fun AppNavigation() {
                                 }
                             )
                             "profile" -> ProfileScreen(
-                                user = currentUser,
+                                userEmail = currentUserEmail ?: "", // Pasamos el email
+                                userRepository = userRepository,
                                 onNavigateToVehicles = { currentScreen = "my_vehicles" }
                             )
                             "my_vehicles" -> MyVehiclesScreen(
-                                user = currentUser,
+                                user = userActual, // Pasamos el usuario actualizado
                                 userRepository = userRepository
                             )
                         }

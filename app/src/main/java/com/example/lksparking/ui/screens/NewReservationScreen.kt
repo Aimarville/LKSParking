@@ -28,6 +28,8 @@ import com.example.lksparking.model.*
 import com.example.lksparking.ui.theme.OrangeLKS
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 
 @Composable
 fun NewReservationScreen(
@@ -37,136 +39,76 @@ fun NewReservationScreen(
 ) {
     var currentStep by remember { mutableIntStateOf(1) }
     var selectedVehicle by remember { mutableStateOf<Vehicle?>(null) }
-    
-    // Step 2 state
     var selectedDate by remember { mutableStateOf<Calendar?>(null) }
     var startTime by remember { mutableStateOf<Calendar?>(null) }
     var endTime by remember { mutableStateOf<Calendar?>(null) }
-    
-    // Step 3 state
     var selectedSpot by remember { mutableStateOf<ParkingSpot?>(null) }
     var filterType by remember { mutableStateOf("TODAS") }
 
     val context = LocalContext.current
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text("Nueva Reserva", fontSize = 32.sp, fontWeight = FontWeight.Bold)
-        Text(
-            "Completa los siguientes pasos para realizar tu reserva",
-            fontSize = 14.sp, color = Color.Gray, modifier = Modifier.padding(vertical = 8.dp)
-        )
+        Text("Completa los pasos para tu reserva", fontSize = 14.sp, color = Color.Gray)
 
         Spacer(Modifier.height(16.dp))
 
-        // --- STEPPER ---
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            StepItem(number = "1", text = "Seleccionar\nVehículo", isActive = currentStep >= 1, isCompleted = currentStep > 1)
-            StepItem(number = "2", text = "Fecha y\nHora", isActive = currentStep >= 2, isCompleted = currentStep > 2)
-            StepItem(number = "3", text = "Seleccionar\nPlaza", isActive = currentStep >= 3, isCompleted = currentStep > 3)
+        // Stepper
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            StepItem("1", "Vehículo", currentStep >= 1, currentStep > 1)
+            StepItem("2", "Horario", currentStep >= 2, currentStep > 2)
+            StepItem("3", "Plaza", currentStep >= 3, currentStep > 3)
         }
 
         Spacer(Modifier.height(24.dp))
 
+        // CONTENEDOR PRINCIPAL CON WEIGHT PARA QUE NO FALLE EL RENDERIZADO
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().weight(1f), // Ocupa el espacio central
             colors = CardDefaults.cardColors(containerColor = Color.White),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             shape = RoundedCornerShape(8.dp)
         ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                when (currentStep) {
-                    1 -> StepOne(
-                        user = user,
-                        selectedVehicle = selectedVehicle,
-                        onVehicleSelected = { selectedVehicle = it }
-                    )
-                    2 -> StepTwo(
-                        selectedDate = selectedDate,
-                        onDateSelected = { selectedDate = it },
-                        startTime = startTime,
-                        onStartTimeSelected = { startTime = it },
-                        endTime = endTime,
-                        onEndTimeSelected = { endTime = it }
-                    )
-                    3 -> StepThree(
-                        userRepository = userRepository,
-                        selectedVehicle = selectedVehicle,
-                        selectedDate = selectedDate,
-                        startTime = startTime,
-                        endTime = endTime,
-                        selectedSpot = selectedSpot,
-                        onSpotSelected = { selectedSpot = it },
-                        filterType = filterType,
-                        onFilterChange = { filterType = it }
-                    )
+            Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
+                Box(modifier = Modifier.weight(1f)) { // Envuelve el step para que la lista scrollee
+                    when (currentStep) {
+                        1 -> StepOne(user, selectedVehicle) { selectedVehicle = it }
+                        2 -> StepTwo(selectedDate, { selectedDate = it }, startTime, { startTime = it }, endTime, { endTime = it })
+                        3 -> StepThree(userRepository, selectedVehicle, selectedDate, startTime, endTime, selectedSpot, { selectedSpot = it }, filterType, { filterType = it })
+                    }
                 }
 
-                Spacer(Modifier.height(32.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    // BOTÓN ATRÁS (Siempre visible excepto en paso 1)
+                // BOTONES DE NAVEGACIÓN (Siempre abajo)
+                Spacer(Modifier.height(16.dp))
+                Row(modifier = Modifier.fillMaxWidth()) {
                     OutlinedButton(
                         onClick = { if (currentStep > 1) currentStep-- },
                         enabled = currentStep > 1,
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(4.dp),
-                        border = BorderStroke(1.dp, if (currentStep > 1) OrangeLKS else Color.LightGray)
-                    ) {
-                        Text("ATRÁS", color = if (currentStep > 1) OrangeLKS else Color.LightGray)
-                    }
+                        shape = RoundedCornerShape(4.dp)
+                    ) { Text("ATRÁS") }
 
                     Spacer(Modifier.width(16.dp))
 
-                    // BOTÓN SIGUIENTE / FINALIZAR
                     Button(
                         onClick = {
                             if (currentStep < 3) {
-                                if (validateStep(currentStep, selectedVehicle, selectedDate, startTime, endTime, context)) {
-                                    currentStep++
-                                }
+                                if (validateStep(currentStep, selectedVehicle, selectedDate, startTime, endTime, context)) currentStep++
                             } else {
-                                if (selectedSpot != null && selectedVehicle != null && selectedDate != null) {
-                                    // 1. CREAR EL OBJETO RESERVA
-                                    val newReservation = Reservation(
-                                        id = UUID.randomUUID().toString(),
-                                        userEmail = user?.email ?: "",
-                                        vehiclePlate = selectedVehicle!!.plate,
-                                        spotId = selectedSpot!!.id,
-                                        date = selectedDate!!,
-                                        startTime = startTime!!,
-                                        endTime = endTime!!
-                                    )
-
-                                    // 2. GUARDAR EN EL REPOSITORIO
-                                    userRepository.addReservation(newReservation)
-
-                                    // 3. SEÑAL DE ÉXITO Y NAVEGACIÓN
+                                if (selectedSpot != null) {
+                                    val newRes = Reservation(UUID.randomUUID().toString(), user?.email ?: "", selectedVehicle!!.plate, selectedSpot!!.id, selectedDate!!, startTime!!, endTime!!)
+                                    userRepository.addReservation(newRes)
                                     Toast.makeText(context, "¡Reserva confirmada!", Toast.LENGTH_SHORT).show()
-
-                                    // Esta función debe venir de MainActivity para cambiar la pantalla
                                     onReservationFinished()
                                 } else {
-                                    Toast.makeText(context, "Por favor, selecciona una plaza", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Selecciona una plaza", Toast.LENGTH_SHORT).show()
                                 }
                             }
                         },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(4.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = OrangeLKS)
-                    ) {
-                        Text(if (currentStep < 3) "SIGUIENTE" else "FINALIZAR")
-                    }
+                    ) { Text(if (currentStep < 3) "SIGUIENTE" else "FINALIZAR") }
                 }
             }
         }
@@ -181,6 +123,8 @@ fun validateStep(
     end: Calendar?,
     context: android.content.Context
 ): Boolean {
+    val now = Calendar.getInstance()
+
     when (step) {
         1 -> {
             if (vehicle == null) {
@@ -192,6 +136,19 @@ fun validateStep(
             if (date == null || start == null || end == null) {
                 Toast.makeText(context, "Por favor completa todos los campos", Toast.LENGTH_SHORT).show()
                 return false
+            }
+
+            if (isSameDay(date, now)) {
+                // Seteamos la hora de inicio seleccionada en el objeto 'date' para comparar
+                val startCheck = (date.clone() as Calendar).apply {
+                    set(Calendar.HOUR_OF_DAY, start.get(Calendar.HOUR_OF_DAY))
+                    set(Calendar.MINUTE, start.get(Calendar.MINUTE))
+                }
+
+                if (startCheck.before(now)) {
+                    Toast.makeText(context, "No puedes reservar una hora que ya ha pasado", Toast.LENGTH_SHORT).show()
+                    return false
+                }
             }
             
             // Re-calculamos para validar (ignorando fecha real, solo horas)
@@ -446,7 +403,6 @@ fun StepThree(
     filterType: String,
     onFilterChange: (String) -> Unit
 ) {
-    // Generar la lista de plazas (30 plazas con tipos variados)
     val allSpots = remember {
         val list = mutableListOf<ParkingSpot>()
         for (i in 1..15) list.add(ParkingSpot("A-${String.format("%02d", i)}", SpotType.NORMAL))
@@ -456,74 +412,59 @@ fun StepThree(
         list
     }
 
-    // LÓGICA DE FILTRADO SEGÚN VEHÍCULO Y DISPONIBILIDAD
     val filteredSpots = remember(selectedVehicle, filterType, selectedDate, startTime, endTime, userRepository.reservationsState.size) {
         allSpots.filter { spot ->
-            // 1. Compatibilidad de tipo de plaza
             val isCompatible = when (selectedVehicle?.type) {
                 VehicleType.MOTORCYCLE -> spot.type == SpotType.MOTORCYCLE
-                VehicleType.AUTOMOBILE -> {
-                    when {
-                        selectedVehicle.isDisabled && selectedVehicle.isElectric ->
-                            spot.type == SpotType.DISABLED || spot.type == SpotType.ELECTRIC || spot.type == SpotType.NORMAL
-                        selectedVehicle.isDisabled -> spot.type == SpotType.DISABLED || spot.type == SpotType.NORMAL
-                        selectedVehicle.isElectric -> spot.type == SpotType.ELECTRIC || spot.type == SpotType.NORMAL
-                        else -> spot.type == SpotType.NORMAL
-                    }
+                else -> when (spot.type) {
+                    SpotType.NORMAL -> true
+                    SpotType.ELECTRIC -> selectedVehicle?.isElectric == true
+                    SpotType.DISABLED -> selectedVehicle?.isDisabled == true
+                    else -> false
                 }
-                else -> false
             }
-
-            // 2. Disponibilidad horaria
             val isAvailable = if(selectedDate != null && startTime != null && endTime != null) {
                 userRepository.isSpotAvailable(spot.id, selectedDate, startTime, endTime)
             } else true
-
-            // 3. Filtro de pestañas (TODAS, MOTO, etc.)
             val matchesFilter = if (filterType == "TODAS") true else spot.type.name == filterType
 
-            // IMPORTANTE: Aquí es donde fallaba, hay que incluir isAvailable
             isCompatible && matchesFilter && isAvailable
         }
     }
 
-    Column {
+    Column(modifier = Modifier.fillMaxSize()) {
         Text("Selecciona una plaza disponible", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(12.dp))
 
-        Spacer(Modifier.height(16.dp))
+        Text("Filtrar por tipo:", fontSize = 14.sp, color = Color.Gray)
 
-        // FILTROS DINÁMICOS
-        Text("Filtrar por tipo:", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+        // --- FILTROS CON SCROLLBAR HORIZONTAL ---
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+                .horizontalScroll(rememberScrollState()), // Habilita el scroll
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             FilterButton("TODAS", filterType == "TODAS") { onFilterChange("TODAS") }
-
-            // Mostrar botones de filtro solo si el vehículo puede usarlos
             if (selectedVehicle?.type == VehicleType.MOTORCYCLE) {
-                FilterButton("MOTO", filterType == "MOTORCYCLE") { onFilterChange("MOTORCYCLE") }
+                FilterButton("MOTORCYCLE", filterType == "MOTORCYCLE") { onFilterChange("MOTORCYCLE") }
             } else {
                 FilterButton("NORMAL", filterType == "NORMAL") { onFilterChange("NORMAL") }
-                if (selectedVehicle?.isElectric == true) {
-                    FilterButton("ELÉCTRICO", filterType == "ELECTRIC") { onFilterChange("ELECTRIC") }
-                }
-                if (selectedVehicle?.isDisabled == true) {
-                    FilterButton("MINUS.", filterType == "DISABLED") { onFilterChange("DISABLED") }
-                }
+                if (selectedVehicle?.isElectric == true) FilterButton("ELECTRIC", filterType == "ELECTRIC") { onFilterChange("ELECTRIC") }
+                if (selectedVehicle?.isDisabled == true) FilterButton("DISABLED", filterType == "DISABLED") { onFilterChange("DISABLED") }
             }
         }
 
+        // GRID DE PLAZAS
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.heightIn(max = 300.dp)
+            modifier = Modifier.fillMaxSize() // Ahora sí puede ser fillMaxSize porque el padre tiene weight
         ) {
             items(filteredSpots) { spot ->
                 val isSelected = selectedSpot?.id == spot.id
-
-                // SELECCIÓN DE ICONO SEGÚN TIPO DE PLAZA
                 val icon = when (spot.type) {
                     SpotType.NORMAL -> Icons.Default.DirectionsCar
                     SpotType.ELECTRIC -> Icons.Default.EvStation
@@ -534,21 +475,14 @@ fun StepThree(
                 Surface(
                     modifier = Modifier
                         .clickable { onSpotSelected(spot) }
-                        .border(
-                            width = 1.dp,
-                            color = if (isSelected) OrangeLKS else Color.LightGray,
-                            shape = RoundedCornerShape(8.dp)
-                        ),
+                        .border(1.dp, if (isSelected) OrangeLKS else Color.LightGray, RoundedCornerShape(8.dp)),
                     color = if (isSelected) OrangeLKS.copy(alpha = 0.1f) else Color.White,
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(icon, null, tint = if (isSelected) OrangeLKS else Color.Gray)
                         Spacer(Modifier.width(8.dp))
-                        Text(spot.id, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                        Text(spot.id)
                     }
                 }
             }

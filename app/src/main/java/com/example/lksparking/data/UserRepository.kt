@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.runtime.mutableStateListOf
 import com.example.lksparking.model.User
 import com.example.lksparking.model.Reservation
+import com.example.lksparking.model.Vehicle
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.io.File
@@ -11,20 +12,15 @@ import java.util.Calendar
 
 class UserRepository(private val context: Context) {
     private val gson = Gson()
-
-    // Archivos
     private val usersFileName = "users.json"
     private val resFileName = "reservations.json"
-
     private val usersFile = File(context.filesDir, usersFileName)
     private val resFile = File(context.filesDir, resFileName)
 
-    // Estados reactivos para Compose
     val usersState = mutableStateListOf<User>()
     val reservationsState = mutableStateListOf<Reservation>()
 
     init {
-        // Cargar datos al iniciar la app
         usersState.addAll(loadUsersFromFile())
         reservationsState.addAll(loadReservationsFromFile())
     }
@@ -39,47 +35,68 @@ class UserRepository(private val context: Context) {
         } catch (e: Exception) { emptyList() }
     }
 
-    fun getUsers(): List<User> = loadUsersFromFile()
-
-    fun updateUser(updatedUser: User): Boolean {
-        val index = usersState.indexOfFirst { it.email == updatedUser.email }
-        if (index != -1) {
-            usersState[index] = updatedUser
-            saveAllUsers(usersState.toList())
-            return true
-        }
-        return false
-    }
-
-    fun saveUser(user: User): Boolean {
-        // 1. Verificar si ya existe en la lista de memoria (que es el reflejo fiel del JSON)
-        if (usersState.any { it.email == user.email }) {
-            return false
-        }
-
-        // 2. Añadir a la lista reactiva (esto actualiza la UI automáticamente)
-        usersState.add(user)
-
-        // 3. Persistir la lista completa actualizada al archivo JSON
-        saveAllUsers(usersState.toList())
-
-        return true
-    }
-
     private fun saveAllUsers(users: List<User>) {
         try {
             usersFile.writeText(gson.toJson(users))
         } catch (e: Exception) { e.printStackTrace() }
     }
 
-    // --- LÓGICA DE RESERVAS (NUEVA) ---
+    fun saveUser(user: User): Boolean {
+        if (usersState.any { it.email == user.email }) return false
+        usersState.add(user)
+        saveAllUsers(usersState.toList())
+        return true
+    }
+
+    // ACTUALIZADO: Función para editar datos del perfil y foto
+    fun updateProfile(email: String, newName: String, newPhone: String, newDept: String, photoUri: String?): Boolean {
+        val index = usersState.indexOfFirst { it.email == email }
+        if (index != -1) {
+            val user = usersState[index]
+            usersState[index] = user.copy(
+                nombre = newName,
+                telefono = newPhone,
+                departamento = newDept,
+                profilePhotoUri = photoUri // Asegúrate de añadir este campo a tu data class User
+            )
+            saveAllUsers(usersState.toList()) // PERSISTENCIA
+            return true
+        }
+        return false
+    }
+
+    // ACTUALIZADO: Ahora guarda en el JSON tras añadir vehículo
+    fun addVehicleToUser(email: String, vehicle: Vehicle): Boolean {
+        val userIndex = usersState.indexOfFirst { it.email == email }
+        if (userIndex != -1) {
+            val user = usersState[userIndex]
+            val newVehicles = user.vehiculos.toMutableList().apply { add(vehicle) }
+            usersState[userIndex] = user.copy(vehiculos = newVehicles)
+            saveAllUsers(usersState.toList()) // PERSISTENCIA
+            return true
+        }
+        return false
+    }
+
+    // ACTUALIZADO: Ahora guarda en el JSON tras eliminar vehículo
+    fun removeVehicleFromUser(email: String, plate: String): Boolean {
+        val userIndex = usersState.indexOfFirst { it.email == email }
+        if (userIndex != -1) {
+            val user = usersState[userIndex]
+            val newVehicles = user.vehiculos.filter { it.plate != plate }
+            usersState[userIndex] = user.copy(vehiculos = newVehicles)
+            saveAllUsers(usersState.toList()) // PERSISTENCIA
+            return true
+        }
+        return false
+    }
+
+    // --- LÓGICA DE RESERVAS ---
     private fun loadReservationsFromFile(): List<Reservation> {
         if (!resFile.exists()) return emptyList()
         return try {
             val json = resFile.readText()
             val type = object : TypeToken<List<Reservation>>() {}.type
-            // Importante: Gson necesita adaptadores especiales si usas Calendar,
-            // pero para objetos simples funciona bien.
             gson.fromJson(json, type) ?: emptyList()
         } catch (e: Exception) { emptyList() }
     }
@@ -91,13 +108,10 @@ class UserRepository(private val context: Context) {
     }
 
     fun addReservation(reservation: Reservation) {
-        reservationsState.add(reservation) // Actualiza la UI
-        saveAllReservations() // Guarda en el archivo .json
+        reservationsState.add(reservation)
+        saveAllReservations()
     }
 
-    fun getAllReservations(): List<Reservation> = reservationsState
-
-    // --- VALIDACIÓN DE DISPONIBILIDAD ---
     fun isSpotAvailable(spotId: String, date: Calendar, start: Calendar, end: Calendar): Boolean {
         return reservationsState.none { res ->
             val sameDay = res.date.get(Calendar.YEAR) == date.get(Calendar.YEAR) &&
@@ -111,7 +125,6 @@ class UserRepository(private val context: Context) {
         }
     }
 
-    // Otros métodos existentes...
     fun getUserByEmail(email: String): User? = usersState.find { it.email == email }
 
     fun isPlateRegisteredGlobally(plate: String): Boolean {
