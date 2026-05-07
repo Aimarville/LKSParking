@@ -1,6 +1,5 @@
-package com.example.lksparking.ui.theme
+package com.lksnext.ParkingAVillegas.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme

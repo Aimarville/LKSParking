@@ -1,4 +1,4 @@
-package com.example.lksparking.ui.screens
+package com.lksnext.ParkingAVillegas.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
@@ -16,11 +16,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.lksparking.data.UserRepository
-import com.example.lksparking.model.User
-import com.example.lksparking.model.Vehicle
-import com.example.lksparking.model.VehicleType
-import com.example.lksparking.ui.theme.OrangeLKS
+import com.lksnext.ParkingAVillegas.data.UserRepository
+import com.lksnext.ParkingAVillegas.model.User
+import com.lksnext.ParkingAVillegas.model.Vehicle
+import com.lksnext.ParkingAVillegas.model.VehicleType
+import com.lksnext.ParkingAVillegas.ui.theme.OrangeLKS
 
 @Composable
 fun MyVehiclesScreen(
@@ -121,21 +121,40 @@ fun VehicleCard(vehicle: Vehicle, onDelete: () -> Unit) {
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(vehicle.plate, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                Text("${vehicle.brand} ${vehicle.model}", color = Color.Gray, fontSize = 14.sp)
-                Row(modifier = Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (vehicle.type == VehicleType.MOTORCYCLE) {
-                        SuggestionChip(onClick = {}, label = { Text("Moto") })
-                    } else {
-                        SuggestionChip(onClick = {}, label = { Text("Coche") })
-                        if (vehicle.isElectric) SuggestionChip(onClick = {}, label = { Text("Eléctrico") })
-                        if (vehicle.isDisabled) SuggestionChip(onClick = {}, label = { Text("Minusválido") })
-                    }
+                Text("${vehicle.brand} ${vehicle.model}", color = Color.Gray)
+
+                Spacer(Modifier.height(8.dp))
+
+                // Alternativa a FlowRow: Usamos un Row con Scroll o simplemente
+                // ponemos los chips en una sola línea que se corta
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    val typeLabel = if (vehicle.type == VehicleType.MOTORCYCLE) "Moto" else "Coche"
+                    VehicleChip(typeLabel, Color(0xFFE3F2FD), Color(0xFF1976D2))
+
+                    if (vehicle.isElectric) VehicleChip("Eléctrico", Color(0xFFE8F5E9), Color(0xFF2E7D32))
+                    if (vehicle.isDisabled) VehicleChip("Minusválido", Color(0xFFFFF3E0), Color(0xFFE65100))
                 }
             }
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Delete, null, tint = Color.Red)
             }
         }
+    }
+}
+
+@Composable
+fun VehicleChip(label: String, bgColor: Color, textColor: Color) {
+    Surface(
+        color = bgColor,
+        shape = RoundedCornerShape(16.dp),
+    ) {
+        Text(
+            text = label,
+            color = textColor,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
     }
 }
 

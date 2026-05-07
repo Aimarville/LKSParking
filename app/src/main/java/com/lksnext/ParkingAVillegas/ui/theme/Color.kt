@@ -1,4 +1,4 @@
-package com.example.lksparking.ui.theme
+package com.lksnext.ParkingAVillegas.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

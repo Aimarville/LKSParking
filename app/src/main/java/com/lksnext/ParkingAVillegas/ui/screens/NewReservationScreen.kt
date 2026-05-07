@@ -1,15 +1,16 @@
-package com.example.lksparking.ui.screens
+package com.lksnext.ParkingAVillegas.ui.screens
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.widget.Toast
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,13 +24,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.lksparking.data.UserRepository
-import com.example.lksparking.model.*
-import com.example.lksparking.ui.theme.OrangeLKS
+import com.lksnext.ParkingAVillegas.data.UserRepository
+import com.lksnext.ParkingAVillegas.model.*
+import com.lksnext.ParkingAVillegas.ui.theme.OrangeLKS
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 
 @Composable
 fun NewReservationScreen(
@@ -62,15 +61,14 @@ fun NewReservationScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        // CONTENEDOR PRINCIPAL CON WEIGHT PARA QUE NO FALLE EL RENDERIZADO
         Card(
-            modifier = Modifier.fillMaxWidth().weight(1f), // Ocupa el espacio central
+            modifier = Modifier.fillMaxWidth().weight(1f),
             colors = CardDefaults.cardColors(containerColor = Color.White),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             shape = RoundedCornerShape(8.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
-                Box(modifier = Modifier.weight(1f)) { // Envuelve el step para que la lista scrollee
+                Box(modifier = Modifier.weight(1f)) {
                     when (currentStep) {
                         1 -> StepOne(user, selectedVehicle) { selectedVehicle = it }
                         2 -> StepTwo(selectedDate, { selectedDate = it }, startTime, { startTime = it }, endTime, { endTime = it })
@@ -78,7 +76,6 @@ fun NewReservationScreen(
                     }
                 }
 
-                // BOTONES DE NAVEGACIÓN (Siempre abajo)
                 Spacer(Modifier.height(16.dp))
                 Row(modifier = Modifier.fillMaxWidth()) {
                     OutlinedButton(
@@ -95,13 +92,29 @@ fun NewReservationScreen(
                             if (currentStep < 3) {
                                 if (validateStep(currentStep, selectedVehicle, selectedDate, startTime, endTime, context)) currentStep++
                             } else {
-                                if (selectedSpot != null) {
-                                    val newRes = Reservation(UUID.randomUUID().toString(), user?.email ?: "", selectedVehicle!!.plate, selectedSpot!!.id, selectedDate!!, startTime!!, endTime!!)
-                                    userRepository.addReservation(newRes)
-                                    Toast.makeText(context, "¡Reserva confirmada!", Toast.LENGTH_SHORT).show()
-                                    onReservationFinished()
-                                } else {
-                                    Toast.makeText(context, "Selecciona una plaza", Toast.LENGTH_SHORT).show()
+                                if (selectedSpot != null && selectedDate != null && startTime != null && endTime != null) {
+                                    val finalStart = (startTime!!.clone() as Calendar)
+                                    val finalEnd = (endTime!!.clone() as Calendar)
+                                    val finalDate = (selectedDate!!.clone() as Calendar)
+
+                                    val newRes = Reservation(
+                                        id = UUID.randomUUID().toString(),
+                                        userEmail = user?.email ?: "",
+                                        vehiclePlate = selectedVehicle!!.plate,
+                                        spotId = selectedSpot!!.id,
+                                        date = selectedDate!!.timeInMillis,
+                                        startTime = startTime!!.timeInMillis,
+                                        endTime = endTime!!.timeInMillis
+                                    )
+
+                                    if (userRepository.addReservation(newRes)) {
+                                        Toast.makeText(context, "¡Reserva confirmada!", Toast.LENGTH_SHORT).show()
+                                        onReservationFinished()
+                                    } else {
+                                        Toast.makeText(context, "La plaza ya no está disponible", Toast.LENGTH_SHORT).show()
+                                    }
+                                } else if (selectedSpot == null) {
+                                    Toast.makeText(context, "Por favor selecciona una plaza", Toast.LENGTH_SHORT).show()
                                 }
                             }
                         },
@@ -123,8 +136,6 @@ fun validateStep(
     end: Calendar?,
     context: android.content.Context
 ): Boolean {
-    val now = Calendar.getInstance()
-
     when (step) {
         1 -> {
             if (vehicle == null) {
@@ -138,23 +149,15 @@ fun validateStep(
                 return false
             }
 
-            if (isSameDay(date, now)) {
-                // Seteamos la hora de inicio seleccionada en el objeto 'date' para comparar
-                val startCheck = (date.clone() as Calendar).apply {
-                    set(Calendar.HOUR_OF_DAY, start.get(Calendar.HOUR_OF_DAY))
-                    set(Calendar.MINUTE, start.get(Calendar.MINUTE))
-                }
-
-                if (startCheck.before(now)) {
-                    Toast.makeText(context, "No puedes reservar una hora que ya ha pasado", Toast.LENGTH_SHORT).show()
-                    return false
-                }
+            val now = Calendar.getInstance()
+            if (start.before(now)) {
+                Toast.makeText(context, "No puedes reservar una hora que ya ha pasado", Toast.LENGTH_SHORT).show()
+                return false
             }
-            
-            // Re-calculamos para validar (ignorando fecha real, solo horas)
+
             val durationMs = end.timeInMillis - start.timeInMillis
             val hours = durationMs / (1000 * 60 * 60.0)
-            
+
             if (hours <= 0) {
                 Toast.makeText(context, "La hora de fin debe ser posterior a la de inicio", Toast.LENGTH_SHORT).show()
                 return false
@@ -261,13 +264,18 @@ fun StepTwo(
         Text("Selecciona fecha y hora", fontSize = 18.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(16.dp))
 
-        // Selector de Fecha
         Box(modifier = Modifier.fillMaxWidth().clickable {
             val calendar = Calendar.getInstance()
             DatePickerDialog(
                 context,
                 { _, y, m, d ->
-                    val newDate = Calendar.getInstance().apply { set(y, m, d) }
+                    val newDate = Calendar.getInstance().apply {
+                        set(y, m, d)
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }
                     onDateSelected(newDate)
                 },
                 calendar.get(Calendar.YEAR),
@@ -298,15 +306,21 @@ fun StepTwo(
         Spacer(Modifier.height(16.dp))
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            // Hora de Inicio
             Box(modifier = Modifier.weight(1f).clickable {
-                TimePickerDialog(context, { _, h, min ->
-                    val cal = Calendar.getInstance().apply { 
-                        set(Calendar.HOUR_OF_DAY, h)
-                        set(Calendar.MINUTE, min) 
-                    }
-                    onStartTimeSelected(cal)
-                }, 8, 0, true).show()
+                if (selectedDate == null) {
+                    Toast.makeText(context, "Selecciona primero una fecha", Toast.LENGTH_SHORT).show()
+                } else {
+                    val base = startTime ?: Calendar.getInstance()
+                    TimePickerDialog(context, { _, h, min ->
+                        val cal = (selectedDate.clone() as Calendar).apply {
+                            set(Calendar.HOUR_OF_DAY, h)
+                            set(Calendar.MINUTE, min)
+                            set(Calendar.SECOND, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }
+                        onStartTimeSelected(cal)
+                    }, base.get(Calendar.HOUR_OF_DAY), base.get(Calendar.MINUTE), true).show()
+                }
             }) {
                 OutlinedTextField(
                     value = startTime?.let { timeFormat.format(it.time) } ?: "08:00",
@@ -323,15 +337,21 @@ fun StepTwo(
                 )
             }
             
-            // Hora de Fin
             Box(modifier = Modifier.weight(1f).clickable {
-                TimePickerDialog(context, { _, h, min ->
-                    val cal = Calendar.getInstance().apply { 
-                        set(Calendar.HOUR_OF_DAY, h)
-                        set(Calendar.MINUTE, min) 
-                    }
-                    onEndTimeSelected(cal)
-                }, 12, 0, true).show()
+                if (selectedDate == null) {
+                    Toast.makeText(context, "Selecciona primero una fecha", Toast.LENGTH_SHORT).show()
+                } else {
+                    val base = endTime ?: Calendar.getInstance()
+                    TimePickerDialog(context, { _, h, min ->
+                        val cal = (selectedDate.clone() as Calendar).apply {
+                            set(Calendar.HOUR_OF_DAY, h)
+                            set(Calendar.MINUTE, min)
+                            set(Calendar.SECOND, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }
+                        onEndTimeSelected(cal)
+                    }, base.get(Calendar.HOUR_OF_DAY), base.get(Calendar.MINUTE), true).show()
+                }
             }) {
                 OutlinedTextField(
                     value = endTime?.let { timeFormat.format(it.time) } ?: "12:00",
@@ -364,8 +384,7 @@ fun StepTwo(
                         Icon(Icons.Default.Info, null, tint = Color(0xFF0288D1))
                         Spacer(Modifier.width(8.dp))
                         Text("Duración de la reserva: ", fontSize = 14.sp)
-                        val hStr = String.format(Locale.getDefault(), "%.0f", hours)
-                        Text("${hStr}h", fontWeight = FontWeight.Bold, color = Color(0xFF0288D1))
+                        Text("${String.format(Locale.getDefault(), "%.1f", hours)}h", fontWeight = FontWeight.Bold, color = Color(0xFF0288D1))
                     }
                 }
             }
@@ -424,7 +443,12 @@ fun StepThree(
                 }
             }
             val isAvailable = if(selectedDate != null && startTime != null && endTime != null) {
-                userRepository.isSpotAvailable(spot.id, selectedDate, startTime, endTime)
+                userRepository.isSpotAvailable(
+                    spot.id,
+                    selectedDate.timeInMillis,
+                    startTime.timeInMillis,
+                    endTime.timeInMillis
+                )
             } else true
             val matchesFilter = if (filterType == "TODAS") true else spot.type.name == filterType
 
@@ -438,12 +462,11 @@ fun StepThree(
 
         Text("Filtrar por tipo:", fontSize = 14.sp, color = Color.Gray)
 
-        // --- FILTROS CON SCROLLBAR HORIZONTAL ---
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp)
-                .horizontalScroll(rememberScrollState()), // Habilita el scroll
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             FilterButton("TODAS", filterType == "TODAS") { onFilterChange("TODAS") }
@@ -456,12 +479,11 @@ fun StepThree(
             }
         }
 
-        // GRID DE PLAZAS
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxSize() // Ahora sí puede ser fillMaxSize porque el padre tiene weight
+            modifier = Modifier.fillMaxSize()
         ) {
             items(filteredSpots) { spot ->
                 val isSelected = selectedSpot?.id == spot.id

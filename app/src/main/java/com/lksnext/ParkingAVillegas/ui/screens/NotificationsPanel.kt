@@ -1,4 +1,4 @@
-package com.example.lksparking.ui.screens
+package com.lksnext.ParkingAVillegas.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInHorizontally
@@ -22,7 +22,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.lksparking.ui.theme.OrangeLKS
+import com.lksnext.ParkingAVillegas.ui.theme.OrangeLKS
 
 data class NotificationItem(
     val id: Int,

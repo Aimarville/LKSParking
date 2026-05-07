@@ -1,4 +1,4 @@
-package com.example.lksparking
+package com.lksnext.ParkingAVillegas
 
 import org.junit.Test
 

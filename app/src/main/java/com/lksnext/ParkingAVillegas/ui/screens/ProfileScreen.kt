@@ -1,4 +1,4 @@
-package com.example.lksparking.ui.screens
+package com.lksnext.ParkingAVillegas.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -16,7 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.BorderStroke
-import com.example.lksparking.ui.theme.OrangeLKS
+import com.lksnext.ParkingAVillegas.ui.theme.OrangeLKS
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -27,7 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage // Necesitarás la librería Coil para cargar imágenes
-import com.example.lksparking.data.UserRepository
+import com.lksnext.ParkingAVillegas.data.UserRepository
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 

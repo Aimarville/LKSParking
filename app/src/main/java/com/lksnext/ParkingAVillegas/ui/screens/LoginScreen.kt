@@ -1,4 +1,4 @@
-package com.example.lksparking.ui.screens
+package com.lksnext.ParkingAVillegas.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.clickable
@@ -20,13 +20,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.lksparking.data.UserRepository
-import com.example.lksparking.model.User
-import com.example.lksparking.ui.theme.LKSParkingTheme
-import com.example.lksparking.ui.theme.OrangeLKS
+import com.lksnext.ParkingAVillegas.data.UserRepository
+import com.lksnext.ParkingAVillegas.model.User
+import com.lksnext.ParkingAVillegas.ui.theme.OrangeLKS
 
 @Composable
 fun LoginScreen(

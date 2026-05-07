@@ -1,4 +1,4 @@
-package com.example.lksparking.model
+package com.lksnext.ParkingAVillegas.model
 
 enum class SpotType {
     NORMAL, DISABLED, ELECTRIC, MOTORCYCLE

@@ -1,4 +1,4 @@
-package com.example.lksparking.model
+package com.lksnext.ParkingAVillegas.model
 
 data class User(
     val nombre: String = "",
