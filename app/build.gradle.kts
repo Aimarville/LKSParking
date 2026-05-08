@@ -42,12 +42,19 @@ android {
 }
 
 sonar {
+    isSkipProject = false
+
     properties {
         property("sonar.projectKey", "Aimarville_LKSParking")
         property("sonar.organization", "aimarville")
         property("sonar.host.url", "https://sonarcloud.io")
+
         property("sonar.sources", "src/main/java,src/main/kotlin")
         property("sonar.binaries", "build/intermediates/javac/debug/classes,build/tmp/kotlin-classes/debug")
+
+        property("sonar.java.binaries", "build/intermediates/javac/debug/classes")
+
+        property("sonar.language", "kotlin")
     }
 }
 
@@ -64,7 +71,6 @@ dependencies {
     implementation(libs.gson)
     implementation(libs.coil.compose)
     implementation(libs.androidx.compose.foundation.layout)
-
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
