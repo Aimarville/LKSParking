@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.sonar)
 }
 
 android {
@@ -19,19 +20,34 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // SOLUCIÓN AL ISSUE DE OFUSCACIÓN:
+            // Se activa Minify para ofuscar el código en la versión final
+            isMinifyEnabled = true
+            isShrinkResources = true // Opcional: elimina recursos no usados
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     buildFeatures {
         compose = true
+    }
+}
+
+sonar {
+    properties {
+        property("sonar.projectKey", "Aimarville_LKSParking")
+        property("sonar.organization", "aimarville")
+        property("sonar.host.url", "https://sonarcloud.io")
+        property("sonar.sources", "src/main/java,src/main/kotlin")
+        property("sonar.binaries", "build/intermediates/javac/debug/classes,build/tmp/kotlin-classes/debug")
     }
 }
 
@@ -46,8 +62,9 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.gson)
-    implementation("io.coil-kt:coil-compose:2.6.0")
-    implementation("androidx.compose.foundation:foundation-layout:1.6.0")
+    implementation(libs.coil.compose)
+    implementation(libs.androidx.compose.foundation.layout)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
