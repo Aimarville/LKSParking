@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.sonar)
 }
 
 android {
@@ -20,10 +19,8 @@ android {
 
     buildTypes {
         release {
-            // SOLUCIÓN AL ISSUE DE OFUSCACIÓN:
-            // Se activa Minify para ofuscar el código en la versión final
             isMinifyEnabled = true
-            isShrinkResources = true // Opcional: elimina recursos no usados
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -38,23 +35,6 @@ android {
 
     buildFeatures {
         compose = true
-    }
-}
-
-sonar {
-    isSkipProject = false
-
-    properties {
-        property("sonar.projectKey", "Aimarville_LKSParking")
-        property("sonar.organization", "aimarville")
-        property("sonar.host.url", "https://sonarcloud.io")
-
-        property("sonar.sources", "src/main/java,src/main/kotlin")
-        property("sonar.binaries", "build/intermediates/javac/debug/classes,build/tmp/kotlin-classes/debug")
-
-        property("sonar.java.binaries", "build/intermediates/javac/debug/classes")
-
-        property("sonar.language", "kotlin")
     }
 }
 

@@ -35,4 +35,4 @@ androidx-compose-foundation-layout = { group = "androidx.compose.foundation", na
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-sonar = { id = "org.sonarqube", version = "5.0.0.4638"}
+sonar = { id = "org.sonarqube", version = "7.3.0.8198"}
