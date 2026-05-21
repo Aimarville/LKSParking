@@ -110,7 +110,7 @@ fun RegisterScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
                     )
                     Text(
-                        text = "Debe ser un correo @empresa.com",
+                        text = "Debe ser un correo @lks.com",
                         fontSize = 12.sp,
                         color = GrayText,
                         modifier = Modifier.padding(start = 16.dp, top = 4.dp)
@@ -180,8 +180,8 @@ fun RegisterScreen(
                             Toast.makeText(context, "Las contraseñas no coinciden", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
-                        if (!email.endsWith("@empresa.com")) {
-                            Toast.makeText(context, "El correo debe terminar en @empresa.com", Toast.LENGTH_SHORT).show()
+                        if (!email.endsWith("@lks.com")) {
+                            Toast.makeText(context, "El correo debe terminar en @lks.com", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
 

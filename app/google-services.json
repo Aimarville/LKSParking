@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "499615651682",
+    "project_id": "parkingavillegas",
+    "storage_bucket": "parkingavillegas.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:499615651682:android:8e6b8c9e1798977485fe3b",
+        "android_client_info": {
+          "package_name": "com.lksnext.ParkingAVillegas"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJO6hnMD9oUuBp48cpE1yknzflVLW-3fE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

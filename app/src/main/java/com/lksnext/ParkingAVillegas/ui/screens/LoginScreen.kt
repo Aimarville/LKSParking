@@ -133,7 +133,7 @@ fun LoginScreen(
                             Toast.makeText(context, "Por favor rellena todos los campos", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
-                        
+
                         val user = userRepository.getUserByEmail(email)
                         if (user != null && user.password == password) {
                             onLoginSuccess(user)
