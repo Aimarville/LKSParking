@@ -24,8 +24,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.lksnext.ParkingAVillegas.data.ParkingData
-import com.lksnext.ParkingAVillegas.data.UserRepository
+import com.lksnext.ParkingAVillegas.data.static.ParkingData
+import com.lksnext.ParkingAVillegas.data.repository.UserRepository
 import com.lksnext.ParkingAVillegas.model.*
 import com.lksnext.ParkingAVillegas.ui.theme.OrangeLKS
 import java.text.SimpleDateFormat

@@ -1,4 +1,4 @@
-package com.lksnext.ParkingAVillegas.data
+package com.lksnext.ParkingAVillegas.data.static
 
 import com.lksnext.ParkingAVillegas.model.ParkingSpot
 import com.lksnext.ParkingAVillegas.model.SpotType

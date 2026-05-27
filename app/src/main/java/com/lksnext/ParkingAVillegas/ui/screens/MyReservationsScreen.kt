@@ -19,7 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.lksnext.ParkingAVillegas.data.UserRepository
+import com.lksnext.ParkingAVillegas.data.repository.UserRepository
 import com.lksnext.ParkingAVillegas.model.ParkingSpot
 import com.lksnext.ParkingAVillegas.model.Reservation
 import com.lksnext.ParkingAVillegas.model.SpotType
@@ -27,6 +27,8 @@ import com.lksnext.ParkingAVillegas.model.User
 import com.lksnext.ParkingAVillegas.model.Vehicle
 import com.lksnext.ParkingAVillegas.model.VehicleType
 import com.lksnext.ParkingAVillegas.ui.theme.OrangeLKS
+import com.lksnext.ParkingAVillegas.validation.ReservationValidator
+import com.lksnext.ParkingAVillegas.validation.VehicleValidator
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -237,26 +239,6 @@ fun EditReservationDialog(
     val context = LocalContext.current
     val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
-    fun isVehicleValidForSpot(vehicle: Vehicle, spotType: SpotType): Boolean {
-        return when (spotType) {
-            SpotType.NORMAL -> {
-                vehicle.type == VehicleType.AUTOMOBILE
-            }
-
-            SpotType.DISABLED -> {
-                vehicle.type == VehicleType.AUTOMOBILE && vehicle.isDisabled
-            }
-
-            SpotType.ELECTRIC -> {
-                vehicle.type == VehicleType.AUTOMOBILE && vehicle.isElectric
-            }
-
-            SpotType.MOTORCYCLE -> {
-                vehicle.type == VehicleType.MOTORCYCLE
-            }
-        }
-    }
-
     val currentSpot = parkingSpots.find {it.id == res.spotId}
 
     AlertDialog(
@@ -310,8 +292,21 @@ fun EditReservationDialog(
                                         add(Calendar.HOUR_OF_DAY, 9)
                                     }
 
-                                    if (endTime.after(maxEnd)) {
-                                        endTime = newStart
+                                    val timeValidation =
+                                        ReservationValidator.validateReservationTime(
+                                            startTime,
+                                            endTime
+                                        )
+
+                                    if (!timeValidation.isValid) {
+
+                                        Toast.makeText(
+                                            context,
+                                            timeValidation.errorMessage,
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+
+                                        return@TimePickerDialog
                                     }
 
                                     startTime = newStart
@@ -399,24 +394,17 @@ fun EditReservationDialog(
                         return@Button
                     }
 
-                    if (!isVehicleValidForSpot(selectedVehicle, currentSpot.type)) {
-                        val errorMessage = when (currentSpot.type) {
-                            SpotType.DISABLED ->
-                                "Solo vehículos para minusválidos pueden usar esta plaza"
+                    val vehicleValidation =
+                        VehicleValidator.validateVehicleForSpot(
+                            selectedVehicle,
+                            currentSpot.type
+                        )
 
-                            SpotType.ELECTRIC ->
-                                "Solo vehículos eléctricos pueden usar esta plaza"
-
-                            SpotType.MOTORCYCLE ->
-                                "Solo motocicletas pueden usar esta plaza"
-
-                            SpotType.NORMAL ->
-                                "Vehñiculo no válido para esta plaza"
-                        }
+                    if (!vehicleValidation.isValid) {
 
                         Toast.makeText(
                             context,
-                            errorMessage,
+                            vehicleValidation.errorMessage,
                             Toast.LENGTH_LONG
                         ).show()
 

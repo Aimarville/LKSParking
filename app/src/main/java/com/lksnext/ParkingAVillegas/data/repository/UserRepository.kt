@@ -1,13 +1,14 @@
-package com.lksnext.ParkingAVillegas.data
+package com.lksnext.ParkingAVillegas.data.repository
 
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
-import com.lksnext.ParkingAVillegas.model.User
-import com.lksnext.ParkingAVillegas.model.Reservation
-import com.lksnext.ParkingAVillegas.model.Vehicle
-import com.google.gson.*
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
+import com.lksnext.ParkingAVillegas.model.Reservation
+import com.lksnext.ParkingAVillegas.model.User
+import com.lksnext.ParkingAVillegas.model.Vehicle
 import java.io.File
 import java.util.Calendar
 
@@ -63,18 +64,18 @@ class UserRepository(private val context: Context) {
         return try {
             val json = resFile.readText()
             gson.fromJson<List<Reservation>>(json, object : TypeToken<List<Reservation>>() {}.type) ?: emptyList()
-        } catch (e: Exception) { 
+        } catch (e: Exception) {
             Log.e("UserRepository", "Error cargando reservas: ${e.message}")
-            emptyList() 
+            emptyList()
         }
     }
 
     private fun saveAllReservations() {
-        try { 
+        try {
             val json = gson.toJson(reservationsState.toList())
             resFile.writeText(json)
             Log.d("UserRepository", "Reservas guardadas en archivo")
-        } catch (e: Exception) { 
+        } catch (e: Exception) {
             Log.e("UserRepository", "Error guardando reservas: ${e.message}")
         }
     }
@@ -108,7 +109,7 @@ class UserRepository(private val context: Context) {
     fun isSpotAvailable(spotId: String, dateMs: Long, startMs: Long, endMs: Long, excludeId: String? = null): Boolean {
         return reservationsState.none { res ->
             if (excludeId != null && res.id == excludeId) return@none false
-            
+
             if (res.spotId == spotId) {
                 // Comprobamos si es el mismo día (normalizado a medianoche)
                 val cal1 = Calendar.getInstance().apply { timeInMillis = res.date }
@@ -125,7 +126,7 @@ class UserRepository(private val context: Context) {
     }
 
     fun getUserByEmail(email: String): User? = usersState.find { it.email == email }
-    
+
     fun updateProfile(email: String, newName: String, newPhone: String, newDept: String, photoUri: String?): Boolean {
         val index = usersState.indexOfFirst { it.email == email }
         if (index != -1) {

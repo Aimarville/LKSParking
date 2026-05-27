@@ -22,9 +22,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.lksnext.ParkingAVillegas.data.UserRepository
+import com.lksnext.ParkingAVillegas.data.repository.UserRepository
 import com.lksnext.ParkingAVillegas.model.User
 import com.lksnext.ParkingAVillegas.ui.theme.OrangeLKS
+import com.lksnext.ParkingAVillegas.validation.AuthValidator
 
 @Composable
 fun LoginScreen(
@@ -129,16 +130,36 @@ fun LoginScreen(
 
                 Button(
                     onClick = {
-                        if (email.isEmpty() || password.isEmpty()) {
-                            Toast.makeText(context, "Por favor rellena todos los campos", Toast.LENGTH_SHORT).show()
+
+                        val validation = AuthValidator.validateLogin(
+                            email = email,
+                            password = password
+                        )
+
+                        if (!validation.isValid) {
+
+                            Toast.makeText(
+                                context,
+                                validation.errorMessage,
+                                Toast.LENGTH_SHORT
+                            ).show()
+
                             return@Button
                         }
 
                         val user = userRepository.getUserByEmail(email)
+
                         if (user != null && user.password == password) {
+
                             onLoginSuccess(user)
+
                         } else {
-                            Toast.makeText(context, "Correo o contraseña incorrectos", Toast.LENGTH_SHORT).show()
+
+                            Toast.makeText(
+                                context,
+                                "Correo o contraseña incorrectos",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     },
                     modifier = Modifier

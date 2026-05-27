@@ -24,10 +24,11 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.lksnext.ParkingAVillegas.data.UserRepository
+import com.lksnext.ParkingAVillegas.data.repository.UserRepository
 import com.lksnext.ParkingAVillegas.model.User
 import com.lksnext.ParkingAVillegas.ui.theme.GrayText
 import com.lksnext.ParkingAVillegas.ui.theme.OrangeLKS
+import com.lksnext.ParkingAVillegas.validation.AuthValidator
 
 @Composable
 fun RegisterScreen(
@@ -178,16 +179,24 @@ fun RegisterScreen(
 
                 Button(
                     onClick = {
-                        if (name.isEmpty() || email.isEmpty() || phone.isEmpty() || department.isEmpty() || password.isEmpty()) {
-                            Toast.makeText(context, "Por favor rellena todos los campos", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-                        if (password != confirmPassword) {
-                            Toast.makeText(context, "Las contraseñas no coinciden", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-                        if (!email.endsWith("@lks.com")) {
-                            Toast.makeText(context, "El correo debe terminar en @lks.com", Toast.LENGTH_SHORT).show()
+
+                        val validation = AuthValidator.validateRegister(
+                            name = name,
+                            email = email,
+                            phone = phone,
+                            department = department,
+                            password = password,
+                            confirmPassword = confirmPassword
+                        )
+
+                        if (!validation.isValid) {
+
+                            Toast.makeText(
+                                context,
+                                validation.errorMessage,
+                                Toast.LENGTH_SHORT
+                            ).show()
+
                             return@Button
                         }
 
@@ -200,10 +209,22 @@ fun RegisterScreen(
                         )
 
                         if (userRepository.saveUser(newUser)) {
-                            Toast.makeText(context, "Registro exitoso", Toast.LENGTH_SHORT).show()
+
+                            Toast.makeText(
+                                context,
+                                "Registro exitoso",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
                             onRegisterSuccess()
+
                         } else {
-                            Toast.makeText(context, "El correo ya está registrado", Toast.LENGTH_SHORT).show()
+
+                            Toast.makeText(
+                                context,
+                                "El correo ya está registrado",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     },
                     modifier = Modifier
