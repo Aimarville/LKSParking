@@ -11,6 +11,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.lksnext.ParkingAVillegas.data.ParkingData
 import com.lksnext.ParkingAVillegas.data.UserRepository
 import com.lksnext.ParkingAVillegas.ui.screens.*
 import com.lksnext.ParkingAVillegas.ui.theme.LKSParkingTheme
@@ -81,7 +82,8 @@ fun AppNavigation(userRepository: UserRepository) {
                             "my_reservations" -> MyReservationsScreen(
                                 currentUser = userActual,
                                 allReservations = userRepository.reservationsState,
-                                userRepository = userRepository // IMPORTANTE: Pasamos el repo para borrar/editar
+                                allParkingSpots = ParkingData.allSpots,
+                                userRepository = userRepository
                             )
                             "new_reservation" -> NewReservationScreen(
                                 user = userActual,

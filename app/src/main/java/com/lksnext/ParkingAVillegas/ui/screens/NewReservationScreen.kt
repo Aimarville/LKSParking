@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lksnext.ParkingAVillegas.data.ParkingData
 import com.lksnext.ParkingAVillegas.data.UserRepository
 import com.lksnext.ParkingAVillegas.model.*
 import com.lksnext.ParkingAVillegas.ui.theme.OrangeLKS
@@ -422,14 +423,7 @@ fun StepThree(
     filterType: String,
     onFilterChange: (String) -> Unit
 ) {
-    val allSpots = remember {
-        val list = mutableListOf<ParkingSpot>()
-        for (i in 1..15) list.add(ParkingSpot("A-${String.format("%02d", i)}", SpotType.NORMAL))
-        for (i in 1..8) list.add(ParkingSpot("E-${String.format("%02d", i)}", SpotType.ELECTRIC))
-        for (i in 1..4) list.add(ParkingSpot("D-${String.format("%02d", i)}", SpotType.DISABLED))
-        for (i in 1..3) list.add(ParkingSpot("M-${String.format("%02d", i)}", SpotType.MOTORCYCLE))
-        list
-    }
+    val allSpots = ParkingData.allSpots
 
     val filteredSpots = remember(selectedVehicle, filterType, selectedDate, startTime, endTime, userRepository.reservationsState.size) {
         allSpots.filter { spot ->

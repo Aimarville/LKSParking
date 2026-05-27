@@ -20,8 +20,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lksnext.ParkingAVillegas.data.UserRepository
+import com.lksnext.ParkingAVillegas.model.ParkingSpot
 import com.lksnext.ParkingAVillegas.model.Reservation
+import com.lksnext.ParkingAVillegas.model.SpotType
 import com.lksnext.ParkingAVillegas.model.User
+import com.lksnext.ParkingAVillegas.model.Vehicle
+import com.lksnext.ParkingAVillegas.model.VehicleType
 import com.lksnext.ParkingAVillegas.ui.theme.OrangeLKS
 import java.text.SimpleDateFormat
 import java.util.*
@@ -31,6 +35,7 @@ import java.util.*
 fun MyReservationsScreen(
     currentUser: User?,
     allReservations: List<Reservation>,
+    allParkingSpots: List<ParkingSpot>,
     userRepository: UserRepository
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -89,6 +94,7 @@ fun MyReservationsScreen(
         EditReservationDialog(
             res = reservationToEdit!!,
             user = currentUser,
+            parkingSpots = allParkingSpots,
             onDismiss = { reservationToEdit = null },
             onConfirm = { updatedRes ->
                 if (userRepository.updateReservation(updatedRes)) {
@@ -214,6 +220,7 @@ fun ReservationCard(
 fun EditReservationDialog(
     res: Reservation,
     user: User?,
+    parkingSpots: List<ParkingSpot>,
     onDismiss: () -> Unit,
     onConfirm: (Reservation) -> Unit
 ) {
@@ -229,6 +236,28 @@ fun EditReservationDialog(
 
     val context = LocalContext.current
     val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+
+    fun isVehicleValidForSpot(vehicle: Vehicle, spotType: SpotType): Boolean {
+        return when (spotType) {
+            SpotType.NORMAL -> {
+                vehicle.type == VehicleType.AUTOMOBILE
+            }
+
+            SpotType.DISABLED -> {
+                vehicle.type == VehicleType.AUTOMOBILE && vehicle.isDisabled
+            }
+
+            SpotType.ELECTRIC -> {
+                vehicle.type == VehicleType.AUTOMOBILE && vehicle.isElectric
+            }
+
+            SpotType.MOTORCYCLE -> {
+                vehicle.type == VehicleType.MOTORCYCLE
+            }
+        }
+    }
+
+    val currentSpot = parkingSpots.find {it.id == res.spotId}
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -251,28 +280,103 @@ fun EditReservationDialog(
                 Text("Horario:", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     // Selector de Hora de Inicio
-                    OutlinedButton(onClick = {
-                        TimePickerDialog(context, { _, h, m ->
-                            val newStart = (startTime.clone() as Calendar).apply {
-                                set(Calendar.HOUR_OF_DAY, h)
-                                set(Calendar.MINUTE, m)
-                            }
-                            startTime = newStart
-                        }, startTime.get(Calendar.HOUR_OF_DAY), startTime.get(Calendar.MINUTE), true).show()
-                    }, modifier = Modifier.weight(1f)) {
+                    OutlinedButton(
+                        onClick = {
+                            TimePickerDialog(
+                                context,
+                                { _, h, m ->
+                                    val now = Calendar.getInstance()
+
+                                    val newStart = (startTime.clone() as Calendar).apply {
+                                        set(Calendar.HOUR_OF_DAY, h)
+                                        set(Calendar.MINUTE, m)
+                                        set(Calendar.SECOND, 0)
+                                        set(Calendar.MILLISECOND, 0)
+                                    }
+
+                                    // No permitir hora anterior a la actual
+                                    if (newStart.before(now)) {
+                                        Toast.makeText(
+                                            context,
+                                            "La hora de inicio no puede ser anterior a la actual",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+
+                                        return@TimePickerDialog
+                                    }
+
+                                    // Si el end actual supera las 9h, ajustarlo automaticamente
+                                    val maxEnd = (newStart.clone() as Calendar).apply {
+                                        add(Calendar.HOUR_OF_DAY, 9)
+                                    }
+
+                                    if (endTime.after(maxEnd)) {
+                                        endTime = newStart
+                                    }
+
+                                    startTime = newStart
+                                },
+                                startTime.get(Calendar.HOUR_OF_DAY),
+                                startTime.get(Calendar.MINUTE),
+                                true
+                            ).show()
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Text("In: ${timeFormat.format(startTime.time)}")
                     }
 
                     // Selector de Hora de Fin
-                    OutlinedButton(onClick = {
-                        TimePickerDialog(context, { _, h, m ->
-                            val newEnd = (endTime.clone() as Calendar).apply {
-                                set(Calendar.HOUR_OF_DAY, h)
-                                set(Calendar.MINUTE, m)
-                            }
-                            endTime = newEnd
-                        }, endTime.get(Calendar.HOUR_OF_DAY), endTime.get(Calendar.MINUTE), true).show()
-                    }, modifier = Modifier.weight(1f)) {
+                    OutlinedButton(
+                        onClick = {
+                            TimePickerDialog(
+                                context,
+                                { _, h, m ->
+
+                                    val newEnd = (endTime.clone() as Calendar).apply {
+                                        set(Calendar.HOUR_OF_DAY, h)
+                                        set(Calendar.MINUTE, m)
+                                        set(Calendar.SECOND, 0)
+                                        set(Calendar.MILLISECOND, 0)
+                                    }
+
+                                    val maxEnd = (startTime.clone() as Calendar).apply {
+                                        add(Calendar.HOUR_OF_DAY, 9)
+                                    }
+
+                                    when {
+
+                                        // Debe ser posterior al inicio
+                                        !newEnd.after(startTime) -> {
+                                            Toast.makeText(
+                                                context,
+                                                "La salida debe ser después de la entrada",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+
+                                        // Máximo 9 horas
+                                        newEnd.after(maxEnd) -> {
+                                            Toast.makeText(
+                                                context,
+                                                "La reserva no puede superar las 9 horas",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+
+                                        else -> {
+                                            endTime = newEnd
+                                        }
+                                    }
+
+                                },
+                                endTime.get(Calendar.HOUR_OF_DAY),
+                                endTime.get(Calendar.MINUTE),
+                                true
+                            ).show()
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Text("Out: ${timeFormat.format(endTime.time)}")
                     }
                 }
@@ -281,6 +385,44 @@ fun EditReservationDialog(
         confirmButton = {
             Button(onClick = {
                 if (endTime.after(startTime)) {
+                    val selectedVehicle = user
+                        ?.vehiculos
+                        ?.find {it.plate == selectedVehiclePlate}
+
+                    if (selectedVehicle == null || currentSpot == null) {
+                        Toast.makeText(
+                            context,
+                            "Error validando vehículo",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        return@Button
+                    }
+
+                    if (!isVehicleValidForSpot(selectedVehicle, currentSpot.type)) {
+                        val errorMessage = when (currentSpot.type) {
+                            SpotType.DISABLED ->
+                                "Solo vehículos para minusválidos pueden usar esta plaza"
+
+                            SpotType.ELECTRIC ->
+                                "Solo vehículos eléctricos pueden usar esta plaza"
+
+                            SpotType.MOTORCYCLE ->
+                                "Solo motocicletas pueden usar esta plaza"
+
+                            SpotType.NORMAL ->
+                                "Vehñiculo no válido para esta plaza"
+                        }
+
+                        Toast.makeText(
+                            context,
+                            errorMessage,
+                            Toast.LENGTH_LONG
+                        ).show()
+
+                        return@Button
+                    }
+
                     // Pasamos .timeInMillis porque el modelo espera un Long
                     onConfirm(res.copy(
                         vehiclePlate = selectedVehiclePlate,
