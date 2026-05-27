@@ -21,17 +21,33 @@ import com.lksnext.ParkingAVillegas.model.User
 import com.lksnext.ParkingAVillegas.ui.components.vehicle.AddVehicleDialog
 import com.lksnext.ParkingAVillegas.ui.components.vehicle.VehicleCard
 import com.lksnext.ParkingAVillegas.ui.theme.OrangeLKS
+import com.lksnext.ParkingAVillegas.viewmodel.AuthViewModel
+import com.lksnext.ParkingAVillegas.viewmodel.VehicleViewModel
 
 @Composable
 fun MyVehiclesScreen(
-    user: User?,
-    userRepository: UserRepository
+    viewModel: VehicleViewModel
 ) {
-    var showAddDialog by remember { mutableStateOf(false) }
+    val uiState by viewModel.uiState.collectAsState()
+
+    var showAddDialog by remember {
+        mutableStateOf(false)
+    }
+
     val context = LocalContext.current
-    val currentUserVehicles = user?.email?.let { email ->
-        userRepository.getUserByEmail(email)?.vehiculos
-    } ?: emptyList()
+
+    // Escuchar errores
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let {
+            Toast.makeText(
+                context,
+                it,
+                Toast.LENGTH_SHORT
+            ).show()
+
+            viewModel.clearError()
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(
@@ -71,20 +87,25 @@ fun MyVehiclesScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        if (currentUserVehicles.isEmpty()) {
+        if (uiState.vehicles.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("No tienes vehículos registrados", color = Color.Gray)
             }
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(currentUserVehicles) { vehicle ->
-                    VehicleCard(vehicle = vehicle, onDelete = {
-                        // REPARACIÓN ELIMINAR:
-                        val success = userRepository.removeVehicleFromUser(user?.email ?: "", vehicle.plate)
-                        if (success) {
-                            Toast.makeText(context, "Vehículo eliminado", Toast.LENGTH_SHORT).show()
+                items(uiState.vehicles) { vehicle ->
+                    VehicleCard(
+                        vehicle = vehicle,
+                        onDelete = {
+                            viewModel.deleteVehicle(vehicle.plate)
+
+                            Toast.makeText(
+                                context,
+                                "Vehículo eliminado",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
-                    })
+                    )
                 }
             }
         }
@@ -94,16 +115,15 @@ fun MyVehiclesScreen(
         AddVehicleDialog(
             onDismiss = { showAddDialog = false },
             onVehicleAdded = { newVehicle ->
-                if (userRepository.isPlateRegisteredGlobally(newVehicle.plate)) {
-                    Toast.makeText(context, "Este vehículo ya está registrado", Toast.LENGTH_LONG).show()
-                } else {
-                    // REPARACIÓN AÑADIR:
-                    val success = userRepository.addVehicleToUser(user?.email ?: "", newVehicle)
-                    if (success) {
-                        showAddDialog = false
-                        Toast.makeText(context, "Vehículo añadido", Toast.LENGTH_SHORT).show()
-                    }
-                }
+                viewModel.addVehicle(newVehicle)
+
+                showAddDialog = false
+
+                Toast.makeText(
+                    context,
+                    "Vehículo añadido",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         )
     }

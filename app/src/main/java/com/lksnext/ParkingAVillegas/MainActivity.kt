@@ -5,7 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.lksnext.ParkingAVillegas.data.repository.UserRepository
-import com.lksnext.ParkingAVillegas.ui.navigation.AppNavigation
+import com.lksnext.ParkingAVillegas.navigation.AppNavigation
 import com.lksnext.ParkingAVillegas.ui.theme.LKSParkingTheme
 
 class MainActivity : ComponentActivity() {
