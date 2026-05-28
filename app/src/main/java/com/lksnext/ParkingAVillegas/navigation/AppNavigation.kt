@@ -6,14 +6,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import com.lksnext.ParkingAVillegas.data.repository.AuthRepository
 import com.lksnext.ParkingAVillegas.data.repository.AuthRepositoryImpl
 import com.lksnext.ParkingAVillegas.data.repository.UserRepository
-import com.lksnext.ParkingAVillegas.data.static.ParkingData
 import com.lksnext.ParkingAVillegas.ui.screens.*
 import com.lksnext.ParkingAVillegas.viewmodel.AuthViewModel
 import com.lksnext.ParkingAVillegas.viewmodel.ProfileViewModel
+import com.lksnext.ParkingAVillegas.viewmodel.ReservationViewModel
 import com.lksnext.ParkingAVillegas.viewmodel.VehicleViewModel
 
 @Composable
@@ -37,7 +35,7 @@ fun AppNavigation(
         AuthViewModel(authRepository)
     }
 
-    val userActual = userRepository
+    val currentUser = userRepository
         .usersState
         .find { it.email == currentUserEmail }
 
@@ -99,7 +97,7 @@ fun AppNavigation(
             else -> {
 
                 MainLayout(
-                    currentUser = userActual,
+                    currentUser = currentUser,
                     currentRoute = currentScreen,
 
                     onNavigate = {
@@ -122,37 +120,58 @@ fun AppNavigation(
                             // RESERVATIONS
                             "my_reservations" -> {
 
-                                MyReservationsScreen(
-                                    currentUser = userActual,
-                                    allReservations = userRepository.reservationsState,
-                                    allParkingSpots = ParkingData.allSpots,
-                                    userRepository = userRepository
-                                )
+                                currentUser?.let { user ->
+
+                                    val reservationViewModel =
+                                        remember(currentUserEmail) {
+
+                                            ReservationViewModel(
+                                                repository = userRepository,
+                                                user = user
+                                            )
+                                        }
+
+                                    MyReservationsScreen(
+                                        viewModel = reservationViewModel
+                                    )
+                                }
                             }
 
                             // NEW RESERVATION
                             "new_reservation" -> {
 
-                                NewReservationScreen(
-                                    user = userActual,
-                                    userRepository = userRepository,
+                                currentUser?.let { user ->
 
-                                    onReservationFinished = {
-                                        currentScreen = "my_reservations"
-                                    }
-                                )
+                                    val reservationViewModel =
+                                        remember(currentUserEmail) {
+
+                                            ReservationViewModel(
+                                                repository = userRepository,
+                                                user = user
+                                            )
+                                        }
+
+                                    NewReservationScreen(
+                                        viewModel = reservationViewModel,
+
+                                        onReservationFinished = {
+                                            currentScreen = "my_reservations"
+                                        }
+                                    )
+                                }
                             }
 
                             // PROFILE
                             "profile" -> {
 
-                                val profileViewModel = remember(currentUserEmail) {
+                                val profileViewModel =
+                                    remember(currentUserEmail) {
 
-                                    ProfileViewModel(
-                                        repository = userRepository,
-                                        userEmail = currentUserEmail ?: ""
-                                    )
-                                }
+                                        ProfileViewModel(
+                                            repository = userRepository,
+                                            userEmail = currentUserEmail ?: ""
+                                        )
+                                    }
 
                                 ProfileScreen(
                                     viewModel = profileViewModel,
@@ -166,13 +185,14 @@ fun AppNavigation(
                             // VEHICLES
                             "my_vehicles" -> {
 
-                                val vehicleViewModel = remember(currentUserEmail) {
+                                val vehicleViewModel =
+                                    remember(currentUserEmail) {
 
-                                    VehicleViewModel(
-                                        repository = userRepository,
-                                        userEmail = currentUserEmail ?: ""
-                                    )
-                                }
+                                        VehicleViewModel(
+                                            repository = userRepository,
+                                            userEmail = currentUserEmail ?: ""
+                                        )
+                                    }
 
                                 MyVehiclesScreen(
                                     viewModel = vehicleViewModel
