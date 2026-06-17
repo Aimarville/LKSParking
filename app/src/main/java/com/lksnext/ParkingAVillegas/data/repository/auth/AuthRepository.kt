@@ -1,4 +1,4 @@
-package com.lksnext.ParkingAVillegas.data.repository
+package com.lksnext.ParkingAVillegas.data.repository.auth
 
 import com.lksnext.ParkingAVillegas.model.User
 

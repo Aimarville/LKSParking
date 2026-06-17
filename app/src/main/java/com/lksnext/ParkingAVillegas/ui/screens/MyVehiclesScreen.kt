@@ -16,12 +16,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.lksnext.ParkingAVillegas.data.repository.UserRepository
-import com.lksnext.ParkingAVillegas.model.User
 import com.lksnext.ParkingAVillegas.ui.components.vehicle.AddVehicleDialog
 import com.lksnext.ParkingAVillegas.ui.components.vehicle.VehicleCard
 import com.lksnext.ParkingAVillegas.ui.theme.OrangeLKS
-import com.lksnext.ParkingAVillegas.viewmodel.AuthViewModel
 import com.lksnext.ParkingAVillegas.viewmodel.VehicleViewModel
 
 @Composable

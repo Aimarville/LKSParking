@@ -18,6 +18,7 @@ import com.lksnext.ParkingAVillegas.ui.components.reservation.StepOne
 import com.lksnext.ParkingAVillegas.ui.components.reservation.StepThree
 import com.lksnext.ParkingAVillegas.ui.components.reservation.StepTwo
 import com.lksnext.ParkingAVillegas.ui.theme.OrangeLKS
+import com.lksnext.ParkingAVillegas.validation.ReservationValidator
 import com.lksnext.ParkingAVillegas.viewmodel.ReservationViewModel
 import java.util.*
 
@@ -250,15 +251,15 @@ fun NewReservationScreen(
                                         return@Button
                                     }
 
-                                    val now = Calendar.getInstance()
+                                    val validation = ReservationValidator.validateReservationTime(
+                                        uiState.startTime!!,
+                                        uiState.endTime!!
+                                    )
 
-                                    if (
-                                        uiState.startTime!!.before(now)
-                                    ) {
-
+                                    if (!validation.isValid) {
                                         Toast.makeText(
                                             context,
-                                            "La hora de inicio no puede ser anterior a la actual",
+                                            validation.errorMessage,
                                             Toast.LENGTH_SHORT
                                         ).show()
 

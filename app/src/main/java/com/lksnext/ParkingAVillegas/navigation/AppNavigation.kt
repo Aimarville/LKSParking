@@ -6,17 +6,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import com.lksnext.ParkingAVillegas.data.repository.AuthRepositoryImpl
-import com.lksnext.ParkingAVillegas.data.repository.UserRepository
+import com.lksnext.ParkingAVillegas.data.repository.auth.AuthRepositoryImpl
+import com.lksnext.ParkingAVillegas.data.repository.reservation.ReservationRepository
+import com.lksnext.ParkingAVillegas.data.repository.user.UserRepository
+import com.lksnext.ParkingAVillegas.data.repository.vehicle.VehicleRepository
 import com.lksnext.ParkingAVillegas.ui.screens.*
-import com.lksnext.ParkingAVillegas.viewmodel.AuthViewModel
-import com.lksnext.ParkingAVillegas.viewmodel.ProfileViewModel
-import com.lksnext.ParkingAVillegas.viewmodel.ReservationViewModel
-import com.lksnext.ParkingAVillegas.viewmodel.VehicleViewModel
+import com.lksnext.ParkingAVillegas.viewmodel.*
 
 @Composable
 fun AppNavigation(
-    userRepository: UserRepository
+    userRepository: UserRepository,
+    vehicleRepository: VehicleRepository,
+    reservationRepository: ReservationRepository
 ) {
 
     var currentScreen by remember {
@@ -35,9 +36,62 @@ fun AppNavigation(
         AuthViewModel(authRepository)
     }
 
-    val currentUser = userRepository
-        .usersState
-        .find { it.email == currentUserEmail }
+    val currentUser =
+        userRepository.users.find {
+            it.email == currentUserEmail
+        }
+
+    /*
+    |--------------------------------------------------------------------------
+    | VIEWMODELS
+    |--------------------------------------------------------------------------
+    */
+
+    val reservationViewModel =
+        remember(
+            currentUserEmail,
+            currentUser // Re-create when user data (like vehicles) changes
+        ) {
+            currentUserEmail?.let {
+                ReservationViewModel(
+                    reservationRepository = reservationRepository,
+                    userRepository = userRepository,
+                    userEmail = it
+                )
+            }
+        }
+
+    val profileViewModel =
+        remember(
+            currentUserEmail,
+            currentUser // Re-create when user data changes
+        ) {
+            ProfileViewModel(
+                userRepository = userRepository,
+                userEmail = currentUserEmail ?: ""
+            )
+        }
+
+    val vehicleViewModel =
+        remember(
+            currentUserEmail,
+            currentUser // Re-create when user data changes
+        ) {
+            VehicleViewModel(
+                vehicleRepository = vehicleRepository,
+                userEmail = currentUserEmail ?: ""
+            )
+        }
+
+    val mainLayoutViewModel =
+        remember(
+            currentUserEmail,
+            currentUser // Re-create when user data changes
+        ) {
+            MainViewModel(
+                user = currentUser
+            )
+        }
 
     Surface(
         modifier = Modifier.fillMaxSize()
@@ -45,7 +99,12 @@ fun AppNavigation(
 
         when (currentScreen) {
 
-            // LOGIN
+            /*
+            |--------------------------------------------------------------------------
+            | LOGIN
+            |--------------------------------------------------------------------------
+            */
+
             "login" -> {
 
                 LoginScreen(
@@ -68,7 +127,12 @@ fun AppNavigation(
                 )
             }
 
-            // FORGOT PASSWORD
+            /*
+            |--------------------------------------------------------------------------
+            | FORGOT PASSWORD
+            |--------------------------------------------------------------------------
+            */
+
             "forgot_password" -> {
 
                 ForgotPasswordScreen(
@@ -78,7 +142,12 @@ fun AppNavigation(
                 )
             }
 
-            // REGISTER
+            /*
+            |--------------------------------------------------------------------------
+            | REGISTER
+            |--------------------------------------------------------------------------
+            */
+
             "register" -> {
 
                 RegisterScreen(
@@ -94,19 +163,24 @@ fun AppNavigation(
                 )
             }
 
+            /*
+            |--------------------------------------------------------------------------
+            | APP
+            |--------------------------------------------------------------------------
+            */
+
             else -> {
 
                 MainLayout(
-                    currentUser = currentUser,
-                    currentRoute = currentScreen,
+                    viewModel = mainLayoutViewModel,
 
-                    onNavigate = {
+                    onNavigate = { route ->
 
-                        if (it == "login") {
+                        if (route == "login") {
                             currentUserEmail = null
                         }
 
-                        currentScreen = it
+                        currentScreen = route
                     }
 
                 ) { padding ->
@@ -117,82 +191,68 @@ fun AppNavigation(
 
                         when (currentScreen) {
 
-                            // RESERVATIONS
+                            /*
+                            |--------------------------------------------------------------------------
+                            | MY RESERVATIONS
+                            |--------------------------------------------------------------------------
+                            */
+
                             "my_reservations" -> {
 
-                                currentUser?.let { user ->
-
-                                    val reservationViewModel =
-                                        remember(currentUserEmail) {
-
-                                            ReservationViewModel(
-                                                repository = userRepository,
-                                                user = user
-                                            )
-                                        }
+                                reservationViewModel?.let {
 
                                     MyReservationsScreen(
-                                        viewModel = reservationViewModel
+                                        viewModel = it
                                     )
                                 }
                             }
 
-                            // NEW RESERVATION
+                            /*
+                            |--------------------------------------------------------------------------
+                            | NEW RESERVATION
+                            |--------------------------------------------------------------------------
+                            */
+
                             "new_reservation" -> {
 
-                                currentUser?.let { user ->
-
-                                    val reservationViewModel =
-                                        remember(currentUserEmail) {
-
-                                            ReservationViewModel(
-                                                repository = userRepository,
-                                                user = user
-                                            )
-                                        }
+                                reservationViewModel?.let {
 
                                     NewReservationScreen(
-                                        viewModel = reservationViewModel,
+                                        viewModel = it,
 
                                         onReservationFinished = {
-                                            currentScreen = "my_reservations"
+                                            currentScreen =
+                                                "my_reservations"
                                         }
                                     )
                                 }
                             }
 
-                            // PROFILE
+                            /*
+                            |--------------------------------------------------------------------------
+                            | PROFILE
+                            |--------------------------------------------------------------------------
+                            */
+
                             "profile" -> {
-
-                                val profileViewModel =
-                                    remember(currentUserEmail) {
-
-                                        ProfileViewModel(
-                                            repository = userRepository,
-                                            userEmail = currentUserEmail ?: ""
-                                        )
-                                    }
 
                                 ProfileScreen(
                                     viewModel = profileViewModel,
 
                                     onNavigateToVehicles = {
-                                        currentScreen = "my_vehicles"
+                                        currentScreen =
+                                            "my_vehicles"
                                     }
                                 )
                             }
 
-                            // VEHICLES
+                            /*
+                            |--------------------------------------------------------------------------
+                            | VEHICLES
+                            |--------------------------------------------------------------------------
+                            */
+
                             "my_vehicles" -> {
-
-                                val vehicleViewModel =
-                                    remember(currentUserEmail) {
-
-                                        VehicleViewModel(
-                                            repository = userRepository,
-                                            userEmail = currentUserEmail ?: ""
-                                        )
-                                    }
 
                                 MyVehiclesScreen(
                                     viewModel = vehicleViewModel

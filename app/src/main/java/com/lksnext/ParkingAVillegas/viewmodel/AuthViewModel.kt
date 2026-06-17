@@ -2,7 +2,7 @@ package com.lksnext.ParkingAVillegas.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lksnext.ParkingAVillegas.data.repository.AuthRepository
+import com.lksnext.ParkingAVillegas.data.repository.auth.AuthRepository
 import com.lksnext.ParkingAVillegas.model.User
 import com.lksnext.ParkingAVillegas.ui.state.AuthUiState
 import kotlinx.coroutines.flow.MutableStateFlow

@@ -24,13 +24,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.lksnext.ParkingAVillegas.data.repository.UserRepository
-import com.lksnext.ParkingAVillegas.model.User
 import com.lksnext.ParkingAVillegas.ui.theme.GrayText
 import com.lksnext.ParkingAVillegas.ui.theme.OrangeLKS
-import com.lksnext.ParkingAVillegas.validation.AuthValidator
 import com.lksnext.ParkingAVillegas.viewmodel.AuthViewModel
-import kotlin.onSuccess
 
 @Composable
 fun RegisterScreen(

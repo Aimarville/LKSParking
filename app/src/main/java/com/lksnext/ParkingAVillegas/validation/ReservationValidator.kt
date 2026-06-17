@@ -9,6 +9,15 @@ object ReservationValidator {
         endTime: Calendar
     ): ValidationResult {
 
+        val now = Calendar.getInstance()
+
+        if (startTime.before(now)) {
+            return ValidationResult(
+                false,
+                "La hora de entrada debe ser posterior a la actual"
+            )
+        }
+
         if (!endTime.after(startTime)) {
             return ValidationResult(
                 false,

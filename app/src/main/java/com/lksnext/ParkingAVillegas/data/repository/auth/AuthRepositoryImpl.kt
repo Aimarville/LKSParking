@@ -1,5 +1,6 @@
-package com.lksnext.ParkingAVillegas.data.repository
+package com.lksnext.ParkingAVillegas.data.repository.auth
 
+import com.lksnext.ParkingAVillegas.data.repository.user.UserRepository
 import com.lksnext.ParkingAVillegas.model.User
 import com.lksnext.ParkingAVillegas.validation.AuthValidator
 

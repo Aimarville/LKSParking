@@ -249,11 +249,15 @@ fun EditReservationDialog(
             Button(
                 onClick = {
 
-                    if (!endTime.after(startTime)) {
+                    val timeValidation = ReservationValidator.validateReservationTime(
+                        startTime,
+                        endTime
+                    )
 
+                    if (!timeValidation.isValid) {
                         Toast.makeText(
                             context,
-                            "La salida debe ser posterior",
+                            timeValidation.errorMessage,
                             Toast.LENGTH_SHORT
                         ).show()
 

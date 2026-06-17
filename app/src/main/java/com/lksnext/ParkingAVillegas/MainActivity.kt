@@ -4,20 +4,41 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.lksnext.ParkingAVillegas.data.repository.UserRepository
+import com.lksnext.ParkingAVillegas.data.local.JsonStorage
+import com.lksnext.ParkingAVillegas.data.repository.reservation.ReservationRepository
+import com.lksnext.ParkingAVillegas.data.repository.reservation.ReservationRepositoryImpl
+import com.lksnext.ParkingAVillegas.data.repository.user.UserRepository
+import com.lksnext.ParkingAVillegas.data.repository.user.UserRepositoryImpl
+import com.lksnext.ParkingAVillegas.data.repository.vehicle.VehicleRepository
+import com.lksnext.ParkingAVillegas.data.repository.vehicle.VehicleRepositoryImpl
 import com.lksnext.ParkingAVillegas.navigation.AppNavigation
 import com.lksnext.ParkingAVillegas.ui.theme.LKSParkingTheme
 
 class MainActivity : ComponentActivity() {
     private lateinit var userRepository: UserRepository
+    private lateinit var vehicleRepository: VehicleRepository
+    private lateinit var reservationRepository: ReservationRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        userRepository = UserRepository(applicationContext)
+
+        val storage =
+            JsonStorage(
+                context = applicationContext
+            )
+
+        userRepository = UserRepositoryImpl(storage)
+        vehicleRepository = VehicleRepositoryImpl(userRepository)
+        reservationRepository = ReservationRepositoryImpl(storage)
+
         enableEdgeToEdge()
         setContent {
             LKSParkingTheme {
-                AppNavigation(userRepository)
+                AppNavigation(
+                    userRepository = userRepository,
+                    vehicleRepository = vehicleRepository,
+                    reservationRepository = reservationRepository
+                )
             }
         }
     }

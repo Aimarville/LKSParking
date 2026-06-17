@@ -2,25 +2,25 @@ package com.lksnext.ParkingAVillegas.viewmodel
 
 import android.net.Uri
 import androidx.lifecycle.ViewModel
-import com.lksnext.ParkingAVillegas.data.repository.UserRepository
+import com.lksnext.ParkingAVillegas.data.repository.user.UserRepository
 import com.lksnext.ParkingAVillegas.ui.state.ProfileUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class ProfileViewModel(
-    private val repository: UserRepository,
+    private val userRepository: UserRepository,
     private val userEmail: String
 ): ViewModel() {
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
     init {
-        loadUser()
+        refresh()
     }
 
     private fun loadUser() {
-        val user = repository.getUserByEmail(userEmail)
+        val user = userRepository.getUserByEmail(userEmail)
 
         if (user != null) {
             _uiState.value = ProfileUiState(
@@ -57,7 +57,7 @@ class ProfileViewModel(
     }
 
     fun saveProfile() {
-        repository.updateProfile(
+        val success = userRepository.updateProfile(
             email = userEmail,
             newName = _uiState.value.name,
             newPhone = _uiState.value.phone,
@@ -65,15 +65,24 @@ class ProfileViewModel(
             photoUri = _uiState.value.photoUri?.toString()
         )
 
-        _uiState.value = _uiState.value.copy(
-            success = true,
-            isEditing = false
-        )
+        if (success) {
+            refresh()
+
+            _uiState.value = _uiState.value.copy(
+                success = true,
+                isEditing = false
+            )
+        }
+
     }
 
     fun clearSuccess() {
         _uiState.value = _uiState.value.copy(
             success = false
         )
+    }
+
+    fun refresh() {
+        loadUser()
     }
 }
