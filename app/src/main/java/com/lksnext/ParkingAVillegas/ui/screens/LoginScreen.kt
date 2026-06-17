@@ -22,22 +22,38 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.lksnext.ParkingAVillegas.data.UserRepository
 import com.lksnext.ParkingAVillegas.model.User
 import com.lksnext.ParkingAVillegas.ui.theme.OrangeLKS
+import com.lksnext.ParkingAVillegas.viewmodel.AuthViewModel
 
 @Composable
 fun LoginScreen(
-    userRepository: UserRepository,
+    viewModel: AuthViewModel,
     modifier: Modifier = Modifier,
     onForgotPasswordClick: () -> Unit = {},
     onRegisterClick: () -> Unit = {},
     onLoginSuccess: (User) -> Unit = {}
 ) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
-    val context = LocalContext.current
+    val uiState by viewModel.uiState.collectAsState()
+
+    var passwordVisible by remember {
+        mutableStateOf(false)
+    }
+
+    var context = LocalContext.current
+
+    // Escuchar errores
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let {
+            Toast.makeText(
+                context,
+                it,
+                Toast.LENGTH_SHORT
+            ).show()
+
+            viewModel.clearError()
+        }
+    }
 
     Column(
         modifier = modifier
@@ -68,7 +84,7 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Gestión de Garaje",
+                    text = "LKS Parking",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
@@ -83,9 +99,12 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
+                // EMAIL
                 OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it },
+                    value = uiState.email,
+                    onValueChange = {
+                        viewModel.updateEmail(it)
+                    },
                     label = { Text("Correo Corporativo *") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -94,9 +113,12 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // PASSWORD
                 OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
+                    value = uiState.password,
+                    onValueChange = {
+                        viewModel.updatePassword(it)
+                    },
                     label = { Text("Contraseña *") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -129,17 +151,11 @@ fun LoginScreen(
 
                 Button(
                     onClick = {
-                        if (email.isEmpty() || password.isEmpty()) {
-                            Toast.makeText(context, "Por favor rellena todos los campos", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-
-                        val user = userRepository.getUserByEmail(email)
-                        if (user != null && user.password == password) {
-                            onLoginSuccess(user)
-                        } else {
-                            Toast.makeText(context, "Correo o contraseña incorrectos", Toast.LENGTH_SHORT).show()
-                        }
+                        viewModel.login(
+                            onSuccess = {
+                                onLoginSuccess(it)
+                            }
+                        )
                     },
                     modifier = Modifier
                         .fillMaxWidth()

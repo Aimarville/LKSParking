@@ -24,26 +24,52 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.lksnext.ParkingAVillegas.data.UserRepository
-import com.lksnext.ParkingAVillegas.model.User
 import com.lksnext.ParkingAVillegas.ui.theme.GrayText
 import com.lksnext.ParkingAVillegas.ui.theme.OrangeLKS
+import com.lksnext.ParkingAVillegas.viewmodel.AuthViewModel
 
 @Composable
 fun RegisterScreen(
-    userRepository: UserRepository,
+    viewModel: AuthViewModel,
     modifier: Modifier = Modifier,
     onLoginClick: () -> Unit = {},
     onRegisterSuccess: () -> Unit = {}
 ) {
-    var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var department by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
-    val context = LocalContext.current
+    val uiState by viewModel.uiState.collectAsState()
+
+    var passwordVisible by remember {
+        mutableStateOf(false)
+    }
+
+    var context = LocalContext.current
+
+    // Escuchar errores
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let {
+            Toast.makeText(
+                context,
+                it,
+                Toast.LENGTH_SHORT
+            ).show()
+
+            viewModel.clearError()
+        }
+    }
+
+    // Exito registro
+    LaunchedEffect(uiState.registerSuccess) {
+        if (uiState.registerSuccess) {
+            Toast.makeText(
+                context,
+                "Registro exitoso",
+                Toast.LENGTH_SHORT
+            ).show()
+
+            viewModel.clearRegisterSuccess()
+
+            onRegisterSuccess()
+        }
+    }
 
     Column(
         modifier = modifier
@@ -90,9 +116,12 @@ fun RegisterScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
+                // NAME
                 OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
+                    value = uiState.name,
+                    onValueChange = {
+                        viewModel.updateName(it)
+                    },
                     label = { Text("Nombre Completo *") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
@@ -100,10 +129,13 @@ fun RegisterScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // EMAIL
                 Column {
                     OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
+                        value = uiState.email,
+                        onValueChange = {
+                            viewModel.updateEmail(it)
+                        },
                         label = { Text("Correo Corporativo *") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
@@ -119,9 +151,12 @@ fun RegisterScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // PHONE
                 OutlinedTextField(
-                    value = phone,
-                    onValueChange = { phone = it },
+                    value = uiState.phone,
+                    onValueChange = {
+                        viewModel.updatePhone(it)
+                    },
                     label = { Text("Teléfono *") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -130,9 +165,12 @@ fun RegisterScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // DEPARTMENT
                 OutlinedTextField(
-                    value = department,
-                    onValueChange = { department = it },
+                    value = uiState.department,
+                    onValueChange = {
+                        viewModel.updateDepartment(it)
+                    },
                     label = { Text("Departamento *") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
@@ -140,9 +178,12 @@ fun RegisterScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // PASSWORD
                 OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
+                    value = uiState.password,
+                    onValueChange = {
+                        viewModel.updatePassword(it)
+                    },
                     label = { Text("Contraseña *") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -158,13 +199,22 @@ fun RegisterScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // CONFIRM PASSWORD
                 OutlinedTextField(
-                    value = confirmPassword,
-                    onValueChange = { confirmPassword = it },
+                    value = uiState.confirmPassword,
+                    onValueChange = {
+                        viewModel.updateConfirmPassword(it)
+                    },
                     label = { Text("Confirmar Contraseña *") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(imageVector = image, contentDescription = null, tint = GrayText)
+                        }
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
                 )
 
@@ -172,33 +222,7 @@ fun RegisterScreen(
 
                 Button(
                     onClick = {
-                        if (name.isEmpty() || email.isEmpty() || phone.isEmpty() || department.isEmpty() || password.isEmpty()) {
-                            Toast.makeText(context, "Por favor rellena todos los campos", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-                        if (password != confirmPassword) {
-                            Toast.makeText(context, "Las contraseñas no coinciden", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-                        if (!email.endsWith("@lks.com")) {
-                            Toast.makeText(context, "El correo debe terminar en @lks.com", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-
-                        val newUser = User(
-                            nombre = name,
-                            email = email,
-                            telefono = phone,
-                            departamento = department,
-                            password = password
-                        )
-
-                        if (userRepository.saveUser(newUser)) {
-                            Toast.makeText(context, "Registro exitoso", Toast.LENGTH_SHORT).show()
-                            onRegisterSuccess()
-                        } else {
-                            Toast.makeText(context, "El correo ya está registrado", Toast.LENGTH_SHORT).show()
-                        }
+                        viewModel.register()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
