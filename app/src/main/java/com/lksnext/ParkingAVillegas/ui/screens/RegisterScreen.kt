@@ -222,7 +222,9 @@ fun RegisterScreen(
 
                 Button(
                     onClick = {
-                        viewModel.register()
+                        viewModel.register {
+                            onRegisterSuccess()
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()

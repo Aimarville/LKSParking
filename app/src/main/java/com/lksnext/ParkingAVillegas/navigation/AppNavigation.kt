@@ -158,7 +158,19 @@ fun AppNavigation(
                     },
 
                     onRegisterSuccess = {
-                        currentScreen = "login"
+                        val user =
+                            authViewModel
+                                .uiState
+                                .value
+                                .loggedUser
+
+                        if (user != null) {
+                            currentUserEmail =
+                                user.email
+
+                            currentScreen =
+                                "my_reservations"
+                        }
                     }
                 )
             }
