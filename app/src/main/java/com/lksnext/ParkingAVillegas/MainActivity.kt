@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.lksnext.ParkingAVillegas.data.local.JsonStorage
 import com.lksnext.ParkingAVillegas.data.repository.reservation.ReservationRepository
 import com.lksnext.ParkingAVillegas.data.repository.reservation.ReservationRepositoryImpl
 import com.lksnext.ParkingAVillegas.data.repository.user.UserRepository
@@ -22,14 +21,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val storage =
-            JsonStorage(
-                context = applicationContext
-            )
-
-        userRepository = UserRepositoryImpl(storage)
+        userRepository = UserRepositoryImpl()
         vehicleRepository = VehicleRepositoryImpl(userRepository)
-        reservationRepository = ReservationRepositoryImpl(storage)
+        reservationRepository = ReservationRepositoryImpl()
 
         enableEdgeToEdge()
         setContent {
@@ -43,4 +37,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-

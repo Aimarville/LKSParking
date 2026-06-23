@@ -36,10 +36,10 @@ fun AppNavigation(
         AuthViewModel(authRepository)
     }
 
-    val currentUser =
-        userRepository.users.find {
-            it.email == currentUserEmail
-        }
+    val currentUser = authViewModel
+        .uiState
+        .value
+        .loggedUser
 
     /*
     |--------------------------------------------------------------------------

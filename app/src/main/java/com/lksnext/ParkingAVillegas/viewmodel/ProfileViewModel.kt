@@ -7,6 +7,8 @@ import com.lksnext.ParkingAVillegas.ui.state.ProfileUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 
 class ProfileViewModel(
     private val userRepository: UserRepository,
@@ -20,17 +22,29 @@ class ProfileViewModel(
     }
 
     private fun loadUser() {
-        val user = userRepository.getUserByEmail(userEmail)
 
-        if (user != null) {
-            _uiState.value = ProfileUiState(
-                name = user.nombre,
-                email = user.email,
-                phone = user.telefono,
-                department = user.departamento,
-                photoUri = user.profilePhotoUri?.let {Uri.parse(it)},
-                vehicleCount = user.vehiculos.size
-            )
+        viewModelScope.launch {
+
+            val user =
+                userRepository.getUserByEmail(
+                    userEmail
+                )
+
+            if (user != null) {
+
+                _uiState.value =
+                    ProfileUiState(
+                        name = user.nombre,
+                        email = user.email,
+                        phone = user.telefono,
+                        department = user.departamento,
+                        photoUri =
+                            user.profilePhotoUri
+                                ?.let { Uri.parse(it) },
+                        vehicleCount =
+                            user.vehiculos.size
+                    )
+            }
         }
     }
 
@@ -57,23 +71,31 @@ class ProfileViewModel(
     }
 
     fun saveProfile() {
-        val success = userRepository.updateProfile(
-            email = userEmail,
-            newName = _uiState.value.name,
-            newPhone = _uiState.value.phone,
-            newDept = _uiState.value.department,
-            photoUri = _uiState.value.photoUri?.toString()
-        )
 
-        if (success) {
-            refresh()
+        viewModelScope.launch {
 
-            _uiState.value = _uiState.value.copy(
-                success = true,
-                isEditing = false
-            )
+            val success =
+                userRepository.updateProfile(
+                    email = userEmail,
+                    newName = _uiState.value.name,
+                    newPhone = _uiState.value.phone,
+                    newDept = _uiState.value.department,
+                    photoUri =
+                        _uiState.value.photoUri
+                            ?.toString()
+                )
+
+            if (success) {
+
+                refresh()
+
+                _uiState.value =
+                    _uiState.value.copy(
+                        success = true,
+                        isEditing = false
+                    )
+            }
         }
-
     }
 
     fun clearSuccess() {
