@@ -1,34 +1,37 @@
 package com.lksnext.ParkingAVillegas.data.repository.vehicle
 
+import com.google.firebase.firestore.FirebaseFirestore
 import com.lksnext.ParkingAVillegas.data.repository.user.UserRepository
 import com.lksnext.ParkingAVillegas.model.Vehicle
+import kotlinx.coroutines.tasks.await
 
 class VehicleRepositoryImpl(
     private val userRepository: UserRepository
 ) : VehicleRepository {
 
-    override fun getVehicles(
+    private val firestore =
+        FirebaseFirestore.getInstance()
+
+    override suspend fun getVehicles(
         email: String
     ): List<Vehicle> {
 
         return userRepository
             .getUserByEmail(email)
             ?.vehiculos
-            ?.toList()
             ?: emptyList()
     }
 
-    override fun addVehicleToUser(
+    override suspend fun addVehicleToUser(
         email: String,
         vehicle: Vehicle
     ): Boolean {
 
-        val exists =
+        if (
             isPlateRegisteredGlobally(
                 vehicle.plate
             )
-
-        if (exists) {
+        ) {
             return false
         }
 
@@ -36,18 +39,22 @@ class VehicleRepositoryImpl(
             userRepository.getUserByEmail(email)
                 ?: return false
 
-        val updatedUser =
-            user.copy(
-                vehiculos =
-                    user.vehiculos + vehicle
-            )
+        val updatedVehicles =
+            user.vehiculos + vehicle
 
-        return userRepository.updateUser(
-            updatedUser
-        )
+        firestore
+            .collection("users")
+            .document(user.uid)
+            .update(
+                "vehiculos",
+                updatedVehicles
+            )
+            .await()
+
+        return true
     }
 
-    override fun removeVehicleFromUser(
+    override suspend fun removeVehicleFromUser(
         email: String,
         plate: String
     ): Boolean {
@@ -56,32 +63,46 @@ class VehicleRepositoryImpl(
             userRepository.getUserByEmail(email)
                 ?: return false
 
-        val updatedUser =
-            user.copy(
-                vehiculos =
-                    user.vehiculos.filter {
-                        it.plate != plate
-                    }
-            )
+        val updatedVehicles =
+            user.vehiculos.filter {
+                it.plate != plate
+            }
 
-        return userRepository.updateUser(
-            updatedUser
-        )
+        firestore
+            .collection("users")
+            .document(user.uid)
+            .update(
+                "vehiculos",
+                updatedVehicles
+            )
+            .await()
+
+        return true
     }
 
-    override fun isPlateRegisteredGlobally(
+    override suspend fun isPlateRegisteredGlobally(
         plate: String
     ): Boolean {
 
-        return userRepository.users.any { user ->
+        val users =
+            firestore
+                .collection("users")
+                .get()
+                .await()
 
-            user.vehiculos.any { vehicle ->
+        return users.documents.any { document ->
 
-                vehicle.plate.equals(
+            val user =
+                document.toObject(
+                    com.lksnext.ParkingAVillegas.model.User::class.java
+                )
+
+            user?.vehiculos?.any {
+                it.plate.equals(
                     plate,
                     ignoreCase = true
                 )
-            }
+            } == true
         }
     }
 }

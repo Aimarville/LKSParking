@@ -3,11 +3,17 @@ package com.lksnext.ParkingAVillegas.data.repository.auth
 import com.lksnext.ParkingAVillegas.data.repository.user.UserRepository
 import com.lksnext.ParkingAVillegas.model.User
 import com.lksnext.ParkingAVillegas.validation.AuthValidator
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
 
 class AuthRepositoryImpl(
     private val userRepository: UserRepository
 ): AuthRepository {
-    override fun login(
+    private val auth = FirebaseAuth.getInstance()
+    private val firestore = FirebaseFirestore.getInstance()
+
+    override suspend fun login(
         email: String,
         password: String
     ): Result<User> {
@@ -22,56 +28,99 @@ class AuthRepositoryImpl(
             )
         }
 
-        val user = userRepository.getUserByEmail(email)
+        return try {
+            val authResult =
+                auth
+                    .signInWithEmailAndPassword(
+                        email,
+                        password
+                    )
+                    .await()
 
-        return if (user != null && user.password == password) {
+            val uid =
+                authResult.user?.uid
+                    ?: throw Exception(
+                        "No se pudo obtener el UID"
+                    )
+
+            val user =
+                firestore
+                    .collection("users")
+                    .document(uid)
+                    .get()
+                    .await()
+                    .toObject(User::class.java)
+                    ?: throw Exception(
+                        "Usuario no encontrado"
+                    )
+
             Result.success(user)
-        } else {
-            Result.failure(
-                Exception("Correo o contraseña incorrectos")
-            )
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 
-    override fun register(
+    override suspend fun register(
         name: String,
         email: String,
         phone: String,
         department: String,
         password: String,
         confirmPassword: String
-    ): Result<Unit> {
-        val validation = AuthValidator.validateRegister(
-            name = name,
-            email = email,
-            phone = phone,
-            department = department,
-            password = password,
-            confirmPassword = confirmPassword,
-        )
+    ): Result<User> {
+
+        val validation =
+            AuthValidator.validateRegister(
+                name = name,
+                email = email,
+                phone = phone,
+                department = department,
+                password = password,
+                confirmPassword = confirmPassword
+            )
 
         if (!validation.isValid) {
+
             return Result.failure(
                 Exception(validation.errorMessage)
             )
         }
 
-        val user = User(
-            nombre = name,
-            email = email,
-            telefono = phone,
-            departamento = department,
-            password = password
-        )
+        return try {
+            val authResult =
+                auth
+                    .createUserWithEmailAndPassword(
+                        email,
+                        password
+                    )
+                    .await()
 
-        val saved = userRepository.saveUser(user)
+            val uid =
+                authResult.user?.uid
+                    ?: throw Exception(
+                        "No se pudo obtener el UID"
+                    )
 
-        return if (saved) {
-            Result.success(Unit)
-        } else {
-            Result.failure(
-                Exception("El correo ya está registrado")
-            )
+            val user =
+                User(
+                    uid = uid,
+                    nombre = name,
+                    email = email,
+                    telefono = phone,
+                    departamento = department
+                )
+
+            firestore
+                .collection("users")
+                .document(uid)
+                .set(user)
+                .await()
+
+            Result.success(user)
+
+        } catch (e: Exception) {
+
+            Result.failure(e)
         }
     }
 }

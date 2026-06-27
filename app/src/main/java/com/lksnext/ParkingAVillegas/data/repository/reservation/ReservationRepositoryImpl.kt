@@ -1,124 +1,88 @@
 package com.lksnext.ParkingAVillegas.data.repository.reservation
 
-import androidx.compose.runtime.mutableStateListOf
-import com.google.gson.reflect.TypeToken
-import com.lksnext.ParkingAVillegas.data.local.JsonStorage
+import com.google.firebase.firestore.FirebaseFirestore
 import com.lksnext.ParkingAVillegas.model.Reservation
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.tasks.await
 import java.util.Calendar
 
-class ReservationRepositoryImpl(
-    private val storage: JsonStorage
-): ReservationRepository {
+class ReservationRepositoryImpl : ReservationRepository {
 
     companion object {
-        private const val FILE_NAME =
-            "reservations.json"
+        private const val COLLECTION = "reservations"
     }
 
-    private val _reservations =
-        mutableStateListOf<Reservation>()
+    private val firestore = FirebaseFirestore.getInstance()
 
-    override val reservations: List<Reservation>
-        get() = _reservations
+    private val _reservations = MutableStateFlow<List<Reservation>>(emptyList())
+    override val reservations: StateFlow<List<Reservation>> = _reservations.asStateFlow()
 
     init {
-        load()
-    }
-
-    private fun load() {
-
-        val type =
-            object : TypeToken<List<Reservation>>() {}.type
-
-        val loadedReservations: List<Reservation> =
-            storage.read(
-                FILE_NAME,
-                type
-            ) ?: emptyList()
-
-        _reservations.clear()
-        _reservations.addAll(loadedReservations)
-    }
-
-    private fun save() {
-
-        storage.write(
-            FILE_NAME,
-            _reservations
-        )
+        firestore.collection(COLLECTION)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                _reservations.value = snapshot.documents.mapNotNull {
+                    it.toObject(Reservation::class.java)
+                }
+            }
     }
 
     override fun getReservationsByUser(email: String): List<Reservation> {
-        return reservations.filter {
-            it.userEmail == email
-        }
+        return _reservations.value.filter { it.userEmail == email }
     }
 
-    override fun addReservation(
-        reservation: Reservation
-    ): Boolean {
+    override suspend fun addReservation(reservation: Reservation): Boolean {
 
-        val available =
-            isSpotAvailable(
+        if (!isSpotAvailable(
                 reservation.spotId,
                 reservation.date,
                 reservation.startTime,
                 reservation.endTime
             )
+        ) return false
 
-        if (!available) {
-            return false
+        return try {
+            firestore.collection(COLLECTION)
+                .document(reservation.id)
+                .set(reservation)
+                .await()
+            true
+        } catch (e: Exception) {
+            false
         }
-
-        _reservations.add(reservation)
-
-        save()
-
-        return true
     }
 
-    override fun updateReservation(
-        reservation: Reservation
-    ): Boolean {
+    override suspend fun updateReservation(reservation: Reservation): Boolean {
 
-        val available =
-            isSpotAvailable(
+        if (!isSpotAvailable(
                 reservation.spotId,
                 reservation.date,
                 reservation.startTime,
                 reservation.endTime,
                 reservation.id
             )
+        ) return false
 
-        if (!available) {
-            return false
+        return try {
+            firestore.collection(COLLECTION)
+                .document(reservation.id)
+                .set(reservation)
+                .await()
+            true
+        } catch (e: Exception) {
+            false
         }
-
-        val index =
-            _reservations.indexOfFirst {
-                it.id == reservation.id
-            }
-
-        if (index == -1) {
-            return false
-        }
-
-        _reservations[index] = reservation
-
-        save()
-
-        return true
     }
 
-    override fun deleteReservation(
-        reservationId: String
-    ) {
-
-        _reservations.removeAll {
-            it.id == reservationId
-        }
-
-        save()
+    override suspend fun deleteReservation(reservationId: String) {
+        try {
+            firestore.collection(COLLECTION)
+                .document(reservationId)
+                .delete()
+                .await()
+        } catch (_: Exception) {}
     }
 
     override fun isSpotAvailable(
@@ -129,41 +93,22 @@ class ReservationRepositoryImpl(
         excludeId: String?
     ): Boolean {
 
-        return _reservations.none { reservation ->
+        return _reservations.value.none { reservation ->
 
-            if (
-                excludeId != null &&
-                reservation.id == excludeId
-            ) {
-                return@none false
-            }
+            if (excludeId != null && reservation.id == excludeId) return@none false
 
-            if (reservation.spotId != spotId) {
-                return@none false
-            }
+            if (reservation.spotId != spotId) return@none false
 
-            val cal1 =
-                Calendar.getInstance().apply {
-                    timeInMillis = reservation.date
-                }
-
-            val cal2 =
-                Calendar.getInstance().apply {
-                    timeInMillis = dateMs
-                }
+            val cal1 = Calendar.getInstance().apply { timeInMillis = reservation.date }
+            val cal2 = Calendar.getInstance().apply { timeInMillis = dateMs }
 
             val sameDay =
-                cal1.get(Calendar.YEAR) ==
-                        cal2.get(Calendar.YEAR) &&
-                        cal1.get(Calendar.DAY_OF_YEAR) ==
-                        cal2.get(Calendar.DAY_OF_YEAR)
+                cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
+                        cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
 
-            if (!sameDay) {
-                return@none false
-            }
+            if (!sameDay) return@none false
 
-            startMs < reservation.endTime &&
-                    endMs > reservation.startTime
+            startMs < reservation.endTime && endMs > reservation.startTime
         }
     }
 }

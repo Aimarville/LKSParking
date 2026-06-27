@@ -1,24 +1,25 @@
 package com.lksnext.ParkingAVillegas.data.repository.reservation
 
 import com.lksnext.ParkingAVillegas.model.Reservation
+import kotlinx.coroutines.flow.StateFlow
 
 interface ReservationRepository {
 
-    val reservations: List<Reservation>
+    val reservations: StateFlow<List<Reservation>>
 
     fun getReservationsByUser(
         email: String
     ): List<Reservation>
 
-    fun addReservation(
+    suspend fun addReservation(
         reservation: Reservation
     ): Boolean
 
-    fun updateReservation(
+    suspend fun updateReservation(
         reservation: Reservation
     ): Boolean
 
-    fun deleteReservation(
+    suspend fun deleteReservation(
         reservationId: String
     )
 

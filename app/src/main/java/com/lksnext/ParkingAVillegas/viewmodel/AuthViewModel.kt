@@ -53,13 +53,14 @@ class AuthViewModel(
             )
 
             result
-                .onSuccess {
+                .onSuccess { user ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
+                        loggedUser = user,
                         isLogged = true
                     )
 
-                    onSuccess(it)
+                    onSuccess(user)
                 }
                 .onFailure {
                     _uiState.value = _uiState.value.copy(
@@ -70,35 +71,49 @@ class AuthViewModel(
         }
     }
 
-    fun register() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isLoading = true,
-                error = null
-            )
+    fun register(
+        onSuccess: (User) -> Unit
+    ) {
 
-            val result = repository.register(
-                name = _uiState.value.name,
-                email = _uiState.value.email,
-                phone = _uiState.value.phone,
-                department = _uiState.value.department,
-                password = _uiState.value.password,
-                confirmPassword = _uiState.value.confirmPassword
-            )
+        viewModelScope.launch {
+
+            _uiState.value =
+                _uiState.value.copy(
+                    isLoading = true,
+                    error = null
+                )
+
+            val result =
+                repository.register(
+                    name = _uiState.value.name,
+                    email = _uiState.value.email,
+                    phone = _uiState.value.phone,
+                    department = _uiState.value.department,
+                    password = _uiState.value.password,
+                    confirmPassword = _uiState.value.confirmPassword
+                )
 
             result
-                .onSuccess {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        registerSuccess = true
-                    )
+                .onSuccess { user ->
+
+                    _uiState.value =
+                        _uiState.value.copy(
+                            isLoading = false,
+                            registerSuccess = true,
+                            loggedUser = user,
+                            isLogged = true
+                        )
+
+                    onSuccess(user)
                 }
 
                 .onFailure {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = it.message
-                    )
+
+                    _uiState.value =
+                        _uiState.value.copy(
+                            isLoading = false,
+                            error = it.message
+                        )
                 }
         }
     }

@@ -36,10 +36,10 @@ fun AppNavigation(
         AuthViewModel(authRepository)
     }
 
-    val currentUser =
-        userRepository.users.find {
-            it.email == currentUserEmail
-        }
+    val currentUser = authViewModel
+        .uiState
+        .value
+        .loggedUser
 
     /*
     |--------------------------------------------------------------------------
@@ -158,7 +158,19 @@ fun AppNavigation(
                     },
 
                     onRegisterSuccess = {
-                        currentScreen = "login"
+                        val user =
+                            authViewModel
+                                .uiState
+                                .value
+                                .loggedUser
+
+                        if (user != null) {
+                            currentUserEmail =
+                                user.email
+
+                            currentScreen =
+                                "my_reservations"
+                        }
                     }
                 )
             }
