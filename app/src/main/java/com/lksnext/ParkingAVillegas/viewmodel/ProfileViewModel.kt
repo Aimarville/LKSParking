@@ -21,30 +21,17 @@ class ProfileViewModel(
         refresh()
     }
 
-    private fun loadUser() {
-
-        viewModelScope.launch {
-
-            val user =
-                userRepository.getUserByEmail(
-                    userEmail
-                )
-
-            if (user != null) {
-
-                _uiState.value =
-                    ProfileUiState(
-                        name = user.nombre,
-                        email = user.email,
-                        phone = user.telefono,
-                        department = user.departamento,
-                        photoUri =
-                            user.profilePhotoUri
-                                ?.let { Uri.parse(it) },
-                        vehicleCount =
-                            user.vehiculos.size
-                    )
-            }
+    private suspend fun updateUserData() {
+        val user = userRepository.getUserByEmail(userEmail)
+        if (user != null) {
+            _uiState.value = _uiState.value.copy(
+                name = user.nombre,
+                email = user.email,
+                phone = user.telefono,
+                department = user.departamento,
+                photoUri = user.profilePhotoUri?.let { Uri.parse(it) },
+                vehicleCount = user.vehiculos.size
+            )
         }
     }
 
@@ -71,29 +58,21 @@ class ProfileViewModel(
     }
 
     fun saveProfile() {
-
         viewModelScope.launch {
-
-            val success =
-                userRepository.updateProfile(
-                    email = userEmail,
-                    newName = _uiState.value.name,
-                    newPhone = _uiState.value.phone,
-                    newDept = _uiState.value.department,
-                    photoUri =
-                        _uiState.value.photoUri
-                            ?.toString()
-                )
+            val success = userRepository.updateProfile(
+                email = userEmail,
+                newName = _uiState.value.name,
+                newPhone = _uiState.value.phone,
+                newDept = _uiState.value.department,
+                photoUri = _uiState.value.photoUri?.toString()
+            )
 
             if (success) {
-
-                refresh()
-
-                _uiState.value =
-                    _uiState.value.copy(
-                        success = true,
-                        isEditing = false
-                    )
+                updateUserData()
+                _uiState.value = _uiState.value.copy(
+                    success = true,
+                    isEditing = false
+                )
             }
         }
     }
@@ -105,6 +84,8 @@ class ProfileViewModel(
     }
 
     fun refresh() {
-        loadUser()
+        viewModelScope.launch {
+            updateUserData()
+        }
     }
 }
