@@ -30,5 +30,6 @@ data class ReservationUiState(
     // UI
     val isLoading: Boolean = false,
     val success: Boolean = false,
+    val updateSuccess: Boolean = false,
     val error: String? = null
 )

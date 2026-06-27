@@ -36,6 +36,21 @@ fun MyReservationsScreen(
 
     val context = LocalContext.current
 
+    LaunchedEffect(uiState.updateSuccess) {
+        if (uiState.updateSuccess) {
+            Toast.makeText(context, "Reserva actualizada", Toast.LENGTH_SHORT).show()
+            reservationToEdit = null
+            viewModel.clearUpdateSuccess()
+        }
+    }
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            viewModel.clearError()
+        }
+    }
+
     val tabs = listOf(
         "VIGENTES (${uiState.currentReservations.size})",
         "HISTÓRICAS (${uiState.historicalReservations.size})"
@@ -91,29 +106,7 @@ fun MyReservationsScreen(
                 reservationToEdit = null
             },
             onConfirm = { updatedReservation ->
-
-                val success =
-                    viewModel.updateReservation(updatedReservation)
-
-                if (success) {
-
-                    Toast.makeText(
-                        context,
-                        "Reserva actualizada",
-                        Toast.LENGTH_SHORT
-                    ).show()
-
-                    // Cierra dialog
-                    reservationToEdit = null
-
-                } else {
-
-                    Toast.makeText(
-                        context,
-                        "La plaza ya no está disponible",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
+                viewModel.updateReservation(updatedReservation)
             }
         )
     }

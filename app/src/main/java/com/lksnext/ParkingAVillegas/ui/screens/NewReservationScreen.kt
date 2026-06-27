@@ -32,6 +32,10 @@ fun NewReservationScreen(
 
     val context = LocalContext.current
 
+    LaunchedEffect(Unit) {
+        viewModel.refresh()
+    }
+
     // SUCCESS
     LaunchedEffect(uiState.success) {
 
@@ -312,18 +316,7 @@ fun NewReservationScreen(
                                         ).show()
 
                                     } else {
-
-                                        val success =
-                                            viewModel.createReservation()
-
-                                        if (!success) {
-
-                                            Toast.makeText(
-                                                context,
-                                                "La plaza ya no está disponible",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
+                                        viewModel.createReservation()
                                     }
                                 }
                             }

@@ -1,100 +1,66 @@
 package com.lksnext.ParkingAVillegas.data.repository.user
 
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.snapshots.SnapshotStateList
-import com.google.gson.reflect.TypeToken
-import com.lksnext.ParkingAVillegas.data.local.JsonStorage
+import com.google.firebase.firestore.FirebaseFirestore
 import com.lksnext.ParkingAVillegas.model.User
+import kotlinx.coroutines.tasks.await
 
-class UserRepositoryImpl(
-    private val storage: JsonStorage
-): UserRepository {
+class UserRepositoryImpl : UserRepository {
 
-    companion object {
-        private const val FILE_NAME =
-            "users.json"
-    }
+    private val firestore =
+        FirebaseFirestore.getInstance()
 
-    private val _users =
-        mutableStateListOf<User>()
-
-    override val users: SnapshotStateList<User>
-        get() = _users
-
-    init {
-        load()
-    }
-
-    private fun load() {
-
-        val type =
-            object : TypeToken<List<User>>() {}.type
-
-        val loadedUsers: List<User> =
-            storage.read(
-                FILE_NAME,
-                type
-            ) ?: emptyList()
-
-        _users.clear()
-        _users.addAll(loadedUsers)
-    }
-
-    private fun save() {
-
-        storage.write(
-            FILE_NAME,
-            _users
-        )
-    }
-
-    override fun getUserByEmail(
+    override suspend fun getUserByEmail(
         email: String
     ): User? {
 
-        return _users.find {
-            it.email == email
-        }
+        val snapshot =
+            firestore
+                .collection("users")
+                .whereEqualTo(
+                    "email",
+                    email
+                )
+                .get()
+                .await()
+
+        return snapshot.documents
+            .firstOrNull()
+            ?.toObject(User::class.java)
     }
 
-    override fun saveUser(
+    override suspend fun getUserByUid(
+        uid: String
+    ): User? {
+
+        return firestore
+            .collection("users")
+            .document(uid)
+            .get()
+            .await()
+            .toObject(User::class.java)
+    }
+
+    override suspend fun updateUser(
         user: User
     ): Boolean {
 
-        val exists =
-            _users.any {
-                it.email == user.email
-            }
+        return try {
 
-        if (exists) {
-            return false
+            firestore
+                .collection("users")
+                .document(user.uid)
+                .set(user)
+                .await()
+
+            true
+
+        } catch (e: Exception) {
+
+            false
         }
-
-        _users.add(user)
-
-        save()
-
-        return true
     }
 
-    override fun updateUser(user: User): Boolean {
-        val index =
-            _users.indexOfFirst {
-                it.email == user.email
-            }
-
-        if (index == -1) {
-            return false
-        }
-
-        _users[index] = user
-
-        save()
-
-        return true
-    }
-
-    override fun updateProfile(
+    override suspend fun updateProfile(
         email: String,
         newName: String,
         newPhone: String,
@@ -102,25 +68,17 @@ class UserRepositoryImpl(
         photoUri: String?
     ): Boolean {
 
-        val index =
-            _users.indexOfFirst {
-                it.email == email
-            }
+        val user =
+            getUserByEmail(email)
+                ?: return false
 
-        if (index == -1) {
-            return false
-        }
-
-        _users[index] =
-            _users[index].copy(
+        return updateUser(
+            user.copy(
                 nombre = newName,
                 telefono = newPhone,
                 departamento = newDept,
                 profilePhotoUri = photoUri
             )
-
-        save()
-
-        return true
+        )
     }
 }

@@ -1,12 +1,14 @@
 package com.lksnext.ParkingAVillegas.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.lksnext.ParkingAVillegas.data.repository.vehicle.VehicleRepository
 import com.lksnext.ParkingAVillegas.model.Vehicle
 import com.lksnext.ParkingAVillegas.ui.state.VehicleUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 class VehicleViewModel(
     private val vehicleRepository: VehicleRepository,
@@ -25,50 +27,58 @@ class VehicleViewModel(
 
     private fun loadVehicles() {
 
-        val vehicles =
-            vehicleRepository.getVehicles(userEmail)
+        viewModelScope.launch {
 
-        _uiState.value =
-            _uiState.value.copy(
-                vehicles = vehicles
-            )
-    }
+            val vehicles =
+                vehicleRepository.getVehicles(
+                    userEmail
+                )
 
-    fun refresh() {
-        loadVehicles()
+            _uiState.value =
+                _uiState.value.copy(
+                    vehicles = vehicles
+                )
+        }
     }
 
     fun addVehicle(vehicle: Vehicle) {
 
-        val success =
-            vehicleRepository.addVehicleToUser(
-                userEmail,
-                vehicle
-            )
+        viewModelScope.launch {
 
-        if (!success) {
+            val success =
+                vehicleRepository
+                    .addVehicleToUser(
+                        userEmail,
+                        vehicle
+                    )
 
-            _uiState.value =
-                _uiState.value.copy(
-                    error = "Este vehículo ya está registrado"
-                )
+            if (!success) {
 
-            return
+                _uiState.value =
+                    _uiState.value.copy(
+                        error =
+                            "Este vehículo ya está registrado"
+                    )
+
+                return@launch
+            }
+
+            loadVehicles()
         }
-
-        loadVehicles()
     }
 
     fun deleteVehicle(plate: String) {
 
-        val success =
-            vehicleRepository.removeVehicleFromUser(
-                userEmail,
-                plate
-            )
+        viewModelScope.launch {
+            val success =
+                vehicleRepository.removeVehicleFromUser(
+                    userEmail,
+                    plate
+                )
 
-        if (success) {
-            loadVehicles()
+            if (success) {
+                loadVehicles()
+            }
         }
     }
 
