@@ -8,13 +8,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.tasks.await
 import java.util.Calendar
 
-class ReservationRepositoryImpl : ReservationRepository {
+class ReservationRepositoryImpl(
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+) : ReservationRepository {
 
     companion object {
         private const val COLLECTION = "reservations"
     }
-
-    private val firestore = FirebaseFirestore.getInstance()
 
     private val _reservations = MutableStateFlow<List<Reservation>>(emptyList())
     override val reservations: StateFlow<List<Reservation>> = _reservations.asStateFlow()

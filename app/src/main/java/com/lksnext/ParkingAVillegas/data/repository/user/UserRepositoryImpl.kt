@@ -4,10 +4,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.lksnext.ParkingAVillegas.model.User
 import kotlinx.coroutines.tasks.await
 
-class UserRepositoryImpl : UserRepository {
-
-    private val firestore =
-        FirebaseFirestore.getInstance()
+class UserRepositoryImpl(
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+) : UserRepository {
 
     override suspend fun getUserByEmail(
         email: String

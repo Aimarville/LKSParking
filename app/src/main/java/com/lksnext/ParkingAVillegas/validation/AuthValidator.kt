@@ -39,6 +39,10 @@ object AuthValidator {
             return ValidationResult(false, "Por favor rellena todos los campos")
         }
 
+        if (!email.endsWith("@lks.com")) {
+            return ValidationResult(false, "El correo debe terminar en @lks.com")
+        }
+
         return ValidationResult(true)
     }
 }

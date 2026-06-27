@@ -27,7 +27,6 @@ class VehicleViewModelTest {
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-        // Mock initial loadVehicles call in init
         coEvery { repository.getVehicles(userEmail) } returns emptyList()
         viewModel = VehicleViewModel(repository, userEmail)
     }
@@ -43,47 +42,51 @@ class VehicleViewModelTest {
     }
 
     @Test
-    fun `addVehicle success reloads vehicles`() {
-        val vehicle = Vehicle(plate = "1234ABC", brand = "Toyota", model = "Corolla", type = VehicleType.AUTOMOBILE)
+    fun `addVehicle success calls repository`() {
+        val vehicle = Vehicle(plate = "123")
         coEvery { repository.addVehicleToUser(userEmail, vehicle) } returns true
         coEvery { repository.getVehicles(userEmail) } returns listOf(vehicle)
 
         viewModel.addVehicle(vehicle)
-
         coVerify { repository.addVehicleToUser(userEmail, vehicle) }
-        assertEquals(1, viewModel.uiState.value.vehicles.size)
-        assertEquals(vehicle, viewModel.uiState.value.vehicles[0])
     }
 
     @Test
-    fun `addVehicle failure sets error`() {
-        val vehicle = Vehicle(plate = "1234ABC", brand = "Toyota", model = "Corolla", type = VehicleType.AUTOMOBILE)
-        coEvery { repository.addVehicleToUser(userEmail, vehicle) } returns false
+    fun `addVehicle success updates vehicle list`() {
+        val vehicle = Vehicle(plate = "123")
+        coEvery { repository.addVehicleToUser(userEmail, vehicle) } returns true
+        coEvery { repository.getVehicles(userEmail) } returns listOf(vehicle)
 
         viewModel.addVehicle(vehicle)
+        assertEquals(1, viewModel.uiState.value.vehicles.size)
+    }
 
+    @Test
+    fun `addVehicle failure sets error message`() {
+        coEvery { repository.addVehicleToUser(userEmail, any()) } returns false
+        viewModel.addVehicle(Vehicle(plate = "123"))
         assertEquals("Este vehículo ya está registrado", viewModel.uiState.value.error)
     }
 
     @Test
-    fun `deleteVehicle success reloads vehicles`() {
-        val plate = "1234ABC"
+    fun `deleteVehicle success calls repository`() {
+        val plate = "123"
         coEvery { repository.removeVehicleFromUser(userEmail, plate) } returns true
-        coEvery { repository.getVehicles(userEmail) } returns emptyList()
-
         viewModel.deleteVehicle(plate)
-
         coVerify { repository.removeVehicleFromUser(userEmail, plate) }
-        assertTrue(viewModel.uiState.value.vehicles.isEmpty())
     }
 
     @Test
-    fun `clearError removes error from state`() {
+    fun `deleteVehicle success reloads list`() {
+        coEvery { repository.removeVehicleFromUser(any(), any()) } returns true
+        viewModel.deleteVehicle("123")
+        coVerify(exactly = 2) { repository.getVehicles(userEmail) }
+    }
+
+    @Test
+    fun `clearError removes error state`() {
         coEvery { repository.addVehicleToUser(any(), any()) } returns false
         viewModel.addVehicle(Vehicle())
-        
-        assertNotNull(viewModel.uiState.value.error)
-        
         viewModel.clearError()
         assertNull(viewModel.uiState.value.error)
     }

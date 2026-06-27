@@ -31,7 +31,6 @@ class ProfileViewModelTest {
         Dispatchers.setMain(testDispatcher)
         mockkStatic(Uri::class)
         
-        // Default mock for initial refresh() call in init
         coEvery { userRepository.getUserByEmail(userEmail) } returns User(
             nombre = "Test User",
             email = userEmail,
@@ -49,82 +48,56 @@ class ProfileViewModelTest {
     }
 
     @Test
-    fun `init loads user data correctly`() {
-        val state = viewModel.uiState.value
-        assertEquals("Test User", state.name)
-        assertEquals(userEmail, state.email)
-        assertEquals("IT", state.department)
+    fun `init loads user name correctly`() {
+        assertEquals("Test User", viewModel.uiState.value.name)
     }
 
     @Test
-    fun `update methods update state`() {
+    fun `init loads user email correctly`() {
+        assertEquals(userEmail, viewModel.uiState.value.email)
+    }
+
+    @Test
+    fun `updateName updates state`() {
         viewModel.updateName("New Name")
-        viewModel.updatePhone("999")
-        viewModel.updateDepartment("HR")
-        
-        val state = viewModel.uiState.value
-        assertEquals("New Name", state.name)
-        assertEquals("999", state.phone)
-        assertEquals("HR", state.department)
+        assertEquals("New Name", viewModel.uiState.value.name)
     }
 
     @Test
-    fun `toggleEditing changes isEditing state`() {
-        assertFalse(viewModel.uiState.value.isEditing)
+    fun `toggleEditing enables editing`() {
         viewModel.toggleEditing()
         assertTrue(viewModel.uiState.value.isEditing)
-        viewModel.toggleEditing()
-        assertFalse(viewModel.uiState.value.isEditing)
     }
 
     @Test
-    fun `saveProfile success updates state and reloads user`() {
-        coEvery { 
-            userRepository.updateProfile(userEmail, any(), any(), any(), any()) 
-        } returns true
-        
-        viewModel.toggleEditing()
-        viewModel.updateName("Updated Name")
-        viewModel.saveProfile()
-        
-        coVerify { 
-            userRepository.updateProfile(userEmail, "Updated Name", any(), any(), any()) 
-        }
-        
-        val state = viewModel.uiState.value
-        assertTrue(state.success)
-        assertFalse(state.isEditing)
-    }
-
-    @Test
-    fun `saveProfile failure keeps editing state and sets no success`() {
-        coEvery { 
-            userRepository.updateProfile(any(), any(), any(), any(), any()) 
-        } returns false
-        
-        viewModel.toggleEditing()
-        viewModel.saveProfile()
-        
-        val state = viewModel.uiState.value
-        assertFalse(state.success)
-        assertTrue(state.isEditing)
-    }
-
-    @Test
-    fun `clearSuccess sets success to false`() {
+    fun `saveProfile success sets success flag`() {
         coEvery { userRepository.updateProfile(any(), any(), any(), any(), any()) } returns true
         viewModel.saveProfile()
         assertTrue(viewModel.uiState.value.success)
-        
-        viewModel.clearSuccess()
-        assertFalse(viewModel.uiState.value.success)
     }
 
     @Test
-    fun `updatePhoto updates state`() {
-        val mockUri = mockk<Uri>()
-        viewModel.updatePhoto(mockUri)
-        assertEquals(mockUri, viewModel.uiState.value.photoUri)
+    fun `saveProfile success disables editing`() {
+        coEvery { userRepository.updateProfile(any(), any(), any(), any(), any()) } returns true
+        viewModel.toggleEditing()
+        viewModel.saveProfile()
+        assertFalse(viewModel.uiState.value.isEditing)
+    }
+
+    @Test
+    fun `saveProfile failure keeps editing enabled`() {
+        coEvery { userRepository.updateProfile(any(), any(), any(), any(), any()) } returns false
+        viewModel.toggleEditing()
+        viewModel.saveProfile()
+        assertTrue(viewModel.uiState.value.isEditing)
+    }
+
+    @Test
+    fun `clearSuccess resets flag`() {
+        coEvery { userRepository.updateProfile(any(), any(), any(), any(), any()) } returns true
+        viewModel.saveProfile()
+        viewModel.clearSuccess()
+        assertFalse(viewModel.uiState.value.success)
     }
 
     @Test

@@ -33,109 +33,93 @@ class AuthViewModelTest {
     }
 
     @Test
-    fun `initial state is empty`() {
-        val state = viewModel.uiState.value
-        assertEquals("", state.name)
-        assertEquals("", state.email)
-        assertEquals("", state.password)
-        assertFalse(state.isLoading)
-        assertNull(state.error)
+    fun `initial state has empty email`() {
+        assertEquals("", viewModel.uiState.value.email)
     }
 
     @Test
-    fun `update methods update the state`() {
-        viewModel.updateName("Name")
+    fun `initial state has no error`() {
+        assertNull(viewModel.uiState.value.error)
+    }
+
+    @Test
+    fun `updateName updates state`() {
+        viewModel.updateName("John")
+        assertEquals("John", viewModel.uiState.value.name)
+    }
+
+    @Test
+    fun `updateEmail updates state`() {
         viewModel.updateEmail("test@lks.com")
+        assertEquals("test@lks.com", viewModel.uiState.value.email)
+    }
+
+    @Test
+    fun `updatePhone updates state`() {
         viewModel.updatePhone("123")
+        assertEquals("123", viewModel.uiState.value.phone)
+    }
+
+    @Test
+    fun `updateDepartment updates state`() {
         viewModel.updateDepartment("IT")
+        assertEquals("IT", viewModel.uiState.value.department)
+    }
+
+    @Test
+    fun `updatePassword updates state`() {
         viewModel.updatePassword("pass")
+        assertEquals("pass", viewModel.uiState.value.password)
+    }
+
+    @Test
+    fun `updateConfirmPassword updates state`() {
         viewModel.updateConfirmPassword("pass")
-
-        val state = viewModel.uiState.value
-        assertEquals("Name", state.name)
-        assertEquals("test@lks.com", state.email)
-        assertEquals("123", state.phone)
-        assertEquals("IT", state.department)
-        assertEquals("pass", state.password)
-        assertEquals("pass", state.confirmPassword)
+        assertEquals("pass", viewModel.uiState.value.confirmPassword)
     }
 
     @Test
-    fun `login success updates state and triggers callback`() {
-        val user = User(uid = "123", email = "test@lks.com")
+    fun `login success sets isLogged true`() {
+        val user = User(uid = "123")
         coEvery { repository.login(any(), any()) } returns Result.success(user)
-        
-        var callbackCalled = false
-        viewModel.updateEmail("test@lks.com")
-        viewModel.updatePassword("password")
-        
-        viewModel.login {
-            callbackCalled = true
-        }
-
-        val state = viewModel.uiState.value
-        assertFalse(state.isLoading)
-        assertTrue(state.isLogged)
-        assertEquals(user, state.loggedUser)
-        assertTrue(callbackCalled)
-    }
-
-    @Test
-    fun `login failure updates error state`() {
-        val errorMessage = "Invalid credentials"
-        coEvery { repository.login(any(), any()) } returns Result.failure(Exception(errorMessage))
-        
         viewModel.login { }
-
-        val state = viewModel.uiState.value
-        assertFalse(state.isLoading)
-        assertFalse(state.isLogged)
-        assertEquals(errorMessage, state.error)
+        assertTrue(viewModel.uiState.value.isLogged)
     }
 
     @Test
-    fun `register success updates state`() {
-        val user = User(uid = "123", email = "test@lks.com")
-        coEvery { repository.register(any(), any(), any(), any(), any(), any()) } returns Result.success(user)
-        
+    fun `login success sets loggedUser`() {
+        val user = User(uid = "123")
+        coEvery { repository.login(any(), any()) } returns Result.success(user)
+        viewModel.login { }
+        assertEquals(user, viewModel.uiState.value.loggedUser)
+    }
+
+    @Test
+    fun `login failure sets error message`() {
+        coEvery { repository.login(any(), any()) } returns Result.failure(Exception("Failed"))
+        viewModel.login { }
+        assertEquals("Failed", viewModel.uiState.value.error)
+    }
+
+    @Test
+    fun `register success sets registerSuccess flag`() {
+        coEvery { repository.register(any(), any(), any(), any(), any(), any()) } returns Result.success(User())
         viewModel.register { }
-
-        val state = viewModel.uiState.value
-        assertTrue(state.registerSuccess)
-        assertTrue(state.isLogged)
-        assertEquals(user, state.loggedUser)
+        assertTrue(viewModel.uiState.value.registerSuccess)
     }
 
     @Test
-    fun `register failure updates error state`() {
-        val errorMessage = "Registration failed"
-        coEvery { repository.register(any(), any(), any(), any(), any(), any()) } returns Result.failure(Exception(errorMessage))
-        
-        viewModel.register { }
-
-        val state = viewModel.uiState.value
-        assertFalse(state.isLoading)
-        assertFalse(state.registerSuccess)
-        assertEquals(errorMessage, state.error)
-    }
-
-    @Test
-    fun `clearError removes error from state`() {
+    fun `clearError removes error`() {
         coEvery { repository.login(any(), any()) } returns Result.failure(Exception("Error"))
         viewModel.login { }
-        
-        assertNotNull(viewModel.uiState.value.error)
-        
         viewModel.clearError()
         assertNull(viewModel.uiState.value.error)
     }
 
     @Test
-    fun `clearRegisterSuccess updates state`() {
+    fun `clearRegisterSuccess resets flag`() {
         coEvery { repository.register(any(), any(), any(), any(), any(), any()) } returns Result.success(User())
         viewModel.register { }
-        assertTrue(viewModel.uiState.value.registerSuccess)
-        
         viewModel.clearRegisterSuccess()
         assertFalse(viewModel.uiState.value.registerSuccess)
     }

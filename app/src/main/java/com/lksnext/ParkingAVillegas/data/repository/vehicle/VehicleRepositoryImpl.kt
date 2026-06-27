@@ -6,11 +6,9 @@ import com.lksnext.ParkingAVillegas.model.Vehicle
 import kotlinx.coroutines.tasks.await
 
 class VehicleRepositoryImpl(
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) : VehicleRepository {
-
-    private val firestore =
-        FirebaseFirestore.getInstance()
 
     override suspend fun getVehicles(
         email: String
